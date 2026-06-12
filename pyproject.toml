@@ -1,0 +1,16 @@
+# Root configuration for project-wide tooling only (Ruff).
+# Intentionally NO [project] section: server/ and client/ are standalone packages.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 110
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (Import-Sortierung)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
