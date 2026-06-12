@@ -1,0 +1,7 @@
+[project]
+name = "client"
+version = "0.1.0"
+description = "Local development client for sending queries to the MCP server"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
