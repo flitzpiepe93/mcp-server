@@ -2,7 +2,6 @@
 name = "server"
 version = "0.1.0"
 description = "MCP server exposing database access as MCP tools for AI agents"
-readme = "README.md"
 authors = [
     { name = "Marcel Kennert-Diaz", email = "marcel.kennert@gmx.de" }
 ]
