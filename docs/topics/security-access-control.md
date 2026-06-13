@@ -41,6 +41,8 @@ lokalen Token-Validierung, kein Umbau der AuthZ-Logik.
 
 ## Kernpunkt
 
-Der Aufwand liegt nicht in der Keycloak-Anbindung (Standard), sondern im **Mapping** von
-Scopes auf konkrete Berechtigungen. Diese Schicht wird in
-[Schritt 3](../roadmap/03-keycloak-scopes.md) gestaltet.
+Ursprünglich wurde der Hauptaufwand im **Mapping** von Scopes auf Berechtigungen erwartet.
+In der Umsetzung ([Schritt 3](../roadmap/03-keycloak-scopes.md)) zeigte sich, dass FastMCP
+die Scope-Durchsetzung mit `require_scopes` bereits eingebaut mitbringt – ein eigenes
+Mapping war nicht nötig. Der reale Aufwand lag beim Container-Networking/Issuer und beim
+Realm-Setup (Scopes, Audience, Service-Account).
