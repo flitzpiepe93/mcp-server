@@ -21,7 +21,8 @@ Interface, nicht die konkrete Datenbank.
     nicht über SQLAlchemy abbildbar, aber vom Pattern getragen.
   - **MemoryRepository** (Tests): eine schlanke In-Memory-Implementierung des Interfaces.
     Erlaubt schnelle, deterministische Tests ohne echte Datenbank oder externe
-    Infrastruktur.
+    Infrastruktur. *Aktuell noch nicht umgesetzt* – wird gemeinsam mit dem ersten Test
+    eingeführt (nicht auf Vorrat).
 
 ## Connection-Pool & Lifespan
 
@@ -30,6 +31,11 @@ Unter Last ist das Öffnen/Schließen einer DB-Verbindung pro Anfrage teuer. Ein
 Implementierungsdetail der SQLAlchemy-Variante (für PostgreSQL relevant, bei SQLite als
 lokaler Datei praktisch kein Thema) und lebt komplett hinter dem Repository-Interface –
 der MCP-Server merkt nichts davon.
+
+Aktuell läuft bewusst der **SQLAlchemy-Default-Pool** ohne explizite Konfiguration. Pool
+existiert also bereits, aber Tuning-Parameter (`pool_size`, `max_overflow`, …) werden
+erst mit der PostgreSQL-Umstellung eingeführt, wenn sie real gebraucht werden – bei
+SQLite haben sie keinen Nutzen und würden den lokalen Pool sogar stören.
 
 Erzeugt und freigegeben wird der Pool im **Lifespan des MCP-Servers**: FastMCP bietet
 einen Lifespan-Hook, der beim Start einmalig läuft und beim Shutdown aufräumt. Dort wird
