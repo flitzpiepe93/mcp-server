@@ -9,6 +9,7 @@ from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from server.audit import AuditMiddleware
 from server.auth import AuthSettings
 from server.repository import (
     SqlTitanicRepository,
@@ -41,7 +42,12 @@ def build_server(
         finally:
             repository.dispose()
 
-    mcp = FastMCP("mcp-db-server", lifespan=lifespan, auth=auth)
+    mcp = FastMCP(
+        "mcp-db-server",
+        lifespan=lifespan,
+        auth=auth,
+        middleware=[AuditMiddleware()],
+    )
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> JSONResponse:
