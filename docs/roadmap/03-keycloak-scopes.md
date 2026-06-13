@@ -79,7 +79,7 @@ Die Scopes sind auf den Titanic-MCP namespaced:
   (`get_survival_rate`).
 
 Der Agent authentifiziert sich per **Client-Credentials-Flow** (Service-Account
-`mcp-agent`), passend zu einem Agenten ohne menschlichen Login.
+`example-agent`), passend zu einem Agenten ohne menschlichen Login.
 
 ### Konfiguration
 
