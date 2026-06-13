@@ -1,0 +1,49 @@
+{
+  "realm": "mcp",
+  "enabled": true,
+  "clientScopes": [
+    {
+      "name": "titanic:access",
+      "protocol": "openid-connect",
+      "description": "Base scope required to access the Titanic MCP server",
+      "attributes": {
+        "include.in.token.scope": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "titanic-mcp-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "titanic-mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "titanic:survival:read",
+      "protocol": "openid-connect",
+      "description": "Read access to the get_survival_rate tool",
+      "attributes": {
+        "include.in.token.scope": "true"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "name": "MCP Agent",
+      "clientId": "mcp-agent",
+      "secret": "${MCP_AGENT_SECRET}",
+      "description": "Service account used by an AI agent to call MCP tools",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["titanic:access", "titanic:survival:read"]
+    }
+  ]
+}

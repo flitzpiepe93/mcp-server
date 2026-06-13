@@ -207,10 +207,16 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastmcp" },
+    { name = "httpx" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "fastmcp", specifier = ">=3.4.2" }]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=3.4.2" },
+    { name = "httpx" },
+    { name = "python-dotenv" },
+]
 
 [[package]]
 name = "colorama"

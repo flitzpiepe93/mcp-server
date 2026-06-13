@@ -1,0 +1,42 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_HOSTNAME: http://keycloak:8080
+      MCP_AGENT_SECRET: ${MCP_AGENT_SECRET}
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      TITANIC_DATABASE_URL: "sqlite:////data/titanic.db"
+      MCP_HOST: "0.0.0.0"
+      MCP_BASE_URL: "http://mcp-server:8000"
+      KEYCLOAK_REALM_URL: "http://keycloak:8080/realms/mcp"
+    volumes:
+      - ./data:/data:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - keycloak
+
+  client:
+    profiles: ["client"]
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    environment:
+      MCP_CLIENT_ID: ${MCP_CLIENT_ID}
+      MCP_AGENT_SECRET: ${MCP_AGENT_SECRET}
+      KEYCLOAK_TOKEN_URL: "http://keycloak:8080/realms/mcp/protocol/openid-connect/token"
+      MCP_URL: "http://mcp-server:8000/mcp/"
+    depends_on:
+      - mcp-server

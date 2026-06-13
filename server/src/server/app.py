@@ -1,11 +1,15 @@
+import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastmcp import Context, FastMCP
+from fastmcp.server.auth import AuthProvider, require_scopes
+from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from server.auth import AuthSettings
 from server.repository import (
     SqlTitanicRepository,
     SurvivalGroupBy,
@@ -14,13 +18,19 @@ from server.repository import (
 )
 
 
-def build_server(build_repository: Callable[[], TitanicRepository]) -> FastMCP:
+def build_server(
+    build_repository: Callable[[], TitanicRepository],
+    auth: AuthProvider | None = None,
+) -> FastMCP:
     """Build the MCP server around a repository factory.
 
     Takes a factory (not a built repository) so the repository — and its
     connection pool — is created inside the lifespan at startup and disposed
     at shutdown, keeping setup and teardown symmetric. Injecting the factory
     also lets tests substitute an in-memory repository.
+
+    The auth provider is injected (not built here) so tests can run without
+    Keycloak; when omitted the server runs unauthenticated.
     """
 
     @asynccontextmanager
@@ -31,14 +41,14 @@ def build_server(build_repository: Callable[[], TitanicRepository]) -> FastMCP:
         finally:
             repository.dispose()
 
-    mcp = FastMCP("mcp-db-server", lifespan=lifespan)
+    mcp = FastMCP("mcp-db-server", lifespan=lifespan, auth=auth)
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> JSONResponse:
         """Unauthenticated health endpoint for load balancers and container probes."""
         return JSONResponse({"status": "healthy", "service": "mcp-db-server"})
 
-    @mcp.tool
+    @mcp.tool(auth=require_scopes("titanic:survival:read"))
     def get_survival_rate(group_by: SurvivalGroupBy, ctx: Context) -> list[SurvivalRate]:
         """Return Titanic survival figures aggregated by a dimension.
 
@@ -56,8 +66,20 @@ def build_server(build_repository: Callable[[], TitanicRepository]) -> FastMCP:
 
 
 def main() -> None:
-    mcp = build_server(SqlTitanicRepository.from_env)
-    uvicorn.run(mcp.http_app(transport="http"), host="127.0.0.1", port=8000)
+    settings = AuthSettings.from_env()
+    # Base scope every agent must carry, so a tool that forgets its own
+    # require_scopes is not silently open. Per-tool scopes are enforced on top.
+    # audience ties tokens to this specific MCP server: a token minted for a
+    # different service in the same realm is rejected.
+    auth = KeycloakAuthProvider(
+        realm_url=settings.realm_url,
+        base_url=settings.base_url,
+        required_scopes=["titanic:access"],
+        audience="titanic-mcp",
+    )
+    mcp = build_server(SqlTitanicRepository.from_env, auth=auth)
+    host = os.getenv("MCP_HOST", "127.0.0.1")
+    uvicorn.run(mcp.http_app(transport="http"), host=host, port=8000)
 
 
 if __name__ == "__main__":
