@@ -1,37 +1,35 @@
 # MCP-Datenbankserver für KI-Agenten
 
-Ein MCP-Server, der eine Datenbank über standardisierte **MCP-Tools** für KI-Agenten
-bereitstellt. Mehrere Agenten können den Server als Werkzeug nutzen, um Daten abzufragen –
-authentifiziert über **Keycloak**, autorisiert über **Scopes** auf Tool-Ebene und lückenlos
-**auditiert** (wer hat wann welches Tool mit welchen Parametern aufgerufen).
+Dieses Repository stellt einen MCP-Server bereit, der kontrollierten Datenbankzugriff für
+KI-Agenten über standardisierte **MCP-Tools** ermöglicht. Agenten rufen fachliche Werkzeuge
+auf, statt direkten Datenbankzugriff zu erhalten – jeder Zugriff ist authentifiziert,
+autorisiert und protokolliert.
 
-Als Beispiel-Datensatz dient der bekannte **Titanic-Datensatz**; das erste Tool
-(`get_survival_rate`) liefert Überlebensraten gruppiert nach Klasse oder Geschlecht. Das
-Design ist von Anfang an datenbank-agnostisch (SQLite jetzt, PostgreSQL später) –
-ausführliche Architektur- und Roadmap-Dokumentation unter [`docs/`](docs/index.md).
+> **Hinweis:** Proof-of-Concept – zeigt das Zusammenspiel der Bausteine lokal (Docker,
+> Keycloak, SQLite), nicht für den Produktiveinsatz gehärtet. Der angedachte AWS-Zielentwurf
+> ist in [`docs/`](docs/index.md) beschrieben.
 
-## Komponenten
+- **Authentifizierung** über Keycloak (OAuth2/OIDC); der Server validiert jedes Token.
+- **Autorisierung** über Scopes auf Tool-Ebene – ein Agent ruft nur die Tools auf, für die
+  er berechtigt ist.
+- **Auditing** jedes Aufrufs: welcher Agent wann welches Tool mit welchen Parametern nutzt.
+- **Klare Trennung von Logik und Datenbankzugriff** durch ein Repository-Interface – das
+  Backend ist austauschbar (SQLite, PostgreSQL, sogar DynamoDB), ohne die Server-Logik zu ändern.
 
-Der Stack besteht aus drei Diensten, die über `docker-compose` orchestriert werden:
+Als Beispiel dient der **Titanic-Datensatz**; das erste Tool (`get_survival_rate`) liefert
+Überlebensraten gruppiert nach Klasse oder Geschlecht. Vollständige Architektur- und
+Roadmap-Dokumentation unter [`docs/`](docs/index.md).
 
-- **Keycloak** – Identity Provider (OAuth2/OIDC). Stellt Tokens für Agenten aus; der Realm
-  wird beim Start aus [`keycloak/realm-export.json`](keycloak/realm-export.json) importiert.
-- **MCP-Server** – FastMCP-Server über HTTP. Validiert die Tokens selbst, setzt Scopes pro
-  Tool durch und protokolliert jeden Aufruf.
-- **Client** – ein Beispiel-Agent, der per Client-Credentials-Flow ein Token holt und das
-  Tool aufruft. Läuft auf Abruf, nicht dauerhaft.
+## Aufbau
 
-## Repo-Struktur
+Drei Dienste, über `docker-compose` orchestriert:
 
 ```
 .
-├── server/              # MCP-Server (FastMCP)
-│   ├── src/server/      # app.py, repository/, auth.py, audit.py
-│   └── Dockerfile
-├── client/              # Beispiel-Agent (Client-Credentials-Flow)
-│   ├── main.py
-│   └── Dockerfile
-├── keycloak/            # Realm-Import (Realm, Client, Scopes)
+├── server/              # MCP-Server: validiert Tokens, setzt Scopes durch, auditiert
+│   └── src/server/      # app.py, repository/, auth.py, audit.py
+├── client/              # Beispiel-Agent: holt ein Token (Client-Credentials) und ruft das Tool
+├── keycloak/            # Identity Provider; Realm-Import (Realm, Client, Scopes)
 ├── data/                # Beispiel-Datenbank (Titanic, SQLite)
 ├── docs/                # Architektur & Roadmap (mkdocs-tauglich)
 ├── docker-compose.yml   # Orchestrierung aller Dienste
@@ -39,40 +37,18 @@ Der Stack besteht aus drei Diensten, die über `docker-compose` orchestriert wer
 └── .env.example         # Vorlage für die lokale Konfiguration
 ```
 
-## Voraussetzungen
+## Setup
 
-- **Docker** (inkl. Docker Compose v2) – führt alle Dienste aus.
-- **make** – für die Helfer-Kommandos (optional, sonst direkt `docker compose ...`).
-
-> Für die Entwicklung am Code außerhalb der Container zusätzlich
-> [**uv**](https://docs.astral.sh/uv/) und **Python 3.11**. Zum reinen Starten nicht nötig.
-
-## Installation & Start
+**Voraussetzungen:** Docker (inkl. Compose v2) und `make`. Für Code-Entwicklung außerhalb
+der Container zusätzlich [uv](https://docs.astral.sh/uv/) und
+[pre-commit](https://pre-commit.com/) (Hooks einmalig per `pre-commit install` aktivieren).
 
 ```bash
-# 1. Konfiguration anlegen (Dev-Defaults, keine echten Secrets)
-cp .env.example .env
-
-# 2. Keycloak + MCP-Server im Hintergrund starten (baut die Images)
-make up
-
-# 3. Den Beispiel-Agenten einmal gegen den Server laufen lassen
-make client
+cp .env.example .env   # lokale Konfiguration (Dev-Defaults, keine echten Secrets)
+make up                # Keycloak + MCP-Server im Hintergrund starten (mit Build)
+make client            # Beispiel-Agent einmal gegen den Server laufen lassen
 ```
 
-Der Client loggt das geholte Token (nur den Scope), die verfügbaren Tools und das Ergebnis
-von `get_survival_rate`.
-
-### Weitere Kommandos
-
-`make` (ohne Argument) listet alle verfügbaren Kommandos:
-
-- `make up` – Keycloak + MCP-Server im Hintergrund starten (mit Build)
-- `make refresh` – kompletter Neustart inkl. Volumes (erzwingt Realm-Reimport)
-- `make client` – den Beispiel-Agenten einmal ausführen
-
-## Konfiguration
-
-Alle geteilten Werte liegen zentral in der `.env` (Vorlage: `.env.example`). Die echte
-`.env` ist git-ignoriert; im Repo stehen nur Platzhalter/Dev-Defaults, keine echten
-Secrets. Fehlt eine benötigte Variable, bricht der Start mit einem klaren Fehler ab.
+`make` (ohne Argument) listet alle Kommandos (u.a. `refresh` für einen kompletten
+Neustart). Die echte `.env` ist git-ignoriert; fehlt eine benötigte Variable, bricht der
+Start mit einem klaren Fehler ab.
