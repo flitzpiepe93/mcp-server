@@ -11,9 +11,13 @@ existiert keine Identität.
 
 ## Was wird protokolliert
 
-- Agent-Identität (aus den Keycloak-Claims)
-- Zeitpunkt
+- Agent-Identität (aus den Keycloak-Claims; im POC die `client_id`)
+- Zeitpunkt und Ausführungsdauer
 - Aufgerufenes Tool und Abfrageparameter
+
+**Nicht** protokolliert wird der Ergebnis-Inhalt oder -Umfang: festgehalten wird, *wer was
+angefragt* hat, nicht *was zurückkam*. Details zur Umsetzung in
+[Schritt 4](../roadmap/04-auditing.md#umsetzung).
 
 ## Designentscheidung
 
