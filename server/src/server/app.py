@@ -84,7 +84,9 @@ def main() -> None:
         audience="titanic-mcp",
     )
     mcp = build_server(SqlTitanicRepository.from_env, auth=auth)
-    host = os.getenv("MCP_HOST", "127.0.0.1")
+    host = os.getenv("MCP_HOST")
+    if host is None:
+        raise RuntimeError("MCP_HOST is not set")
     uvicorn.run(mcp.http_app(transport="http"), host=host, port=8000)
 
 
