@@ -10,5 +10,11 @@ refresh:  ## Tear down (incl. volumes) and start fresh (with build)
 	docker compose down -v
 	docker compose up -d --build
 
+down:  ## Stop and remove the running containers
+	docker compose down -v
+
 client:  ## Run the example agent client once against the server
 	docker compose run --rm client
+
+docs-serve:  ## Serve the documentation locally with live reload
+	uv run --group docs mkdocs serve
