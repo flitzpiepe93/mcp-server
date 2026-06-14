@@ -78,7 +78,7 @@ class SqlTitanicRepository:
             SurvivalRate(
                 **{group_by.value: row.label},
                 count=row.n,
-                survival_rate=round(row.rate, 3),
+                survival_rate=row.rate,
             )
             for row in rows
         ]

@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class SurvivalGroupBy(StrEnum):
@@ -27,6 +27,13 @@ class SurvivalRate(BaseModel):
     sex: str | None = None
     count: int
     survival_rate: float
+
+    @field_validator("survival_rate")
+    @classmethod
+    def _round_rate(cls, value: float) -> float:
+        """Survival rate is reported to three decimal places, regardless of
+        which repository computed it."""
+        return round(value, 3)
 
 
 class TitanicRepository(Protocol):
