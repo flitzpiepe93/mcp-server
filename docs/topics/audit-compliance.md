@@ -16,8 +16,8 @@ existiert keine Identität.
 - Aufgerufenes Tool und Abfrageparameter
 
 **Nicht** protokolliert wird der Ergebnis-Inhalt oder -Umfang: festgehalten wird, *wer was
-angefragt* hat, nicht *was zurückkam*. Details zur Umsetzung in
-[Schritt 4](../roadmap/04-auditing.md#umsetzung).
+angefragt* hat, nicht *was zurückkam*. Details zur Umsetzung unter
+[Umsetzung: Auditing](../implementation/auditing.md).
 
 ## Designentscheidung
 

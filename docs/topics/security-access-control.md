@@ -38,11 +38,3 @@ Damit der Wechsel POC → AWS kein Umschreiben bedeutet, liest der Server die Id
 stets aus den **geprüften Claims im Request** – unabhängig davon, *wer* sie validiert hat
 (Server im POC, Gateway auf AWS). Der spätere Umstieg ist dann nur das Weglassen der
 lokalen Token-Validierung, kein Umbau der AuthZ-Logik.
-
-## Kernpunkt
-
-Ursprünglich wurde der Hauptaufwand im **Mapping** von Scopes auf Berechtigungen erwartet.
-In der Umsetzung ([Schritt 3](../roadmap/03-keycloak-scopes.md)) zeigte sich, dass FastMCP
-die Scope-Durchsetzung mit `require_scopes` bereits eingebaut mitbringt – ein eigenes
-Mapping war nicht nötig. Der reale Aufwand lag beim Container-Networking/Issuer und beim
-Realm-Setup (Scopes, Audience, Service-Account).

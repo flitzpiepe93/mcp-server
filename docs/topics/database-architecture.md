@@ -15,14 +15,13 @@ Interface, nicht die konkrete Datenbank.
   durchgereichtes SQL. Verhindert, dass DB-Details in den Server leaken.
 - **Interface als `Protocol`/ABC**: Konkrete Implementierungen werden injiziert.
 - **Austausch über Implementierungen**:
-  - **SQLite** (Test) und **PostgreSQL** (später): eine gemeinsame
+  - **SQLite** (POC) und **PostgreSQL** (später): eine gemeinsame
     SQLAlchemy-Implementierung, Wechsel im Wesentlichen über die Connection-URL.
   - **DynamoDB**: eine *eigene* Repository-Implementierung gegen dasselbe Interface –
     nicht über SQLAlchemy abbildbar, aber vom Pattern getragen.
   - **MemoryRepository** (Tests): eine schlanke In-Memory-Implementierung des Interfaces.
     Erlaubt schnelle, deterministische Tests ohne echte Datenbank oder externe
-    Infrastruktur. *Aktuell noch nicht umgesetzt* – wird gemeinsam mit dem ersten Test
-    eingeführt (nicht auf Vorrat).
+    Infrastruktur.
 
 ## Connection-Pool & Lifespan
 

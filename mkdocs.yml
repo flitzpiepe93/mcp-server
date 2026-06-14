@@ -1,0 +1,62 @@
+site_name: MCP-Datenbankserver für KI-Agenten
+site_description: Kontrollierter Datenbankzugriff für KI-Agenten über MCP-Tools
+
+theme:
+  name: material
+  language: de
+  icon:
+    logo: material/database
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Helles Theme
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Dunkles Theme
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - search.highlight
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Überblick: index.md
+  - Roadmap:
+      - 1 – FastMCP über HTTP: roadmap/01-fastmcp.md
+      - 2 – Repository Pattern: roadmap/02-repository-pattern.md
+      - 3 – Keycloak & Scopes: roadmap/03-keycloak-scopes.md
+      - 4 – Auditing: roadmap/04-auditing.md
+  - Umsetzung:
+      - Überblick: implementation/index.md
+      - Repository & erstes Tool: implementation/repository.md
+      - Keycloak & Scopes: implementation/keycloak.md
+      - Auditing: implementation/auditing.md
+  - Themen:
+      - Sicherheit & Zugriffskontrolle: topics/security-access-control.md
+      - Nachvollziehbarkeit & Compliance: topics/audit-compliance.md
+      - Datenbankarchitektur: topics/database-architecture.md
+      - Infrastruktur & Betrieb: topics/infrastructure-operations.md
+      - Agent-Lifecycle: topics/agent-lifecycle.md

@@ -1,0 +1,87 @@
+:root {
+  --mcp-grad-1: #06120e;
+  --mcp-grad-2: #0c2620;
+  --mcp-grad-3: #123a30;
+  --mcp-accent: #2dd4bf;
+  --mcp-accent-bright: #5eead4;
+}
+
+/* Mint als Akzent in beiden Themes */
+[data-md-color-accent="teal"] {
+  --md-accent-fg-color: var(--mcp-accent);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-accent-fg-color: var(--mcp-accent);
+}
+
+/* Dunkler Gradient im Header und in der Tab-Leiste, gegenläufig */
+.md-header {
+  background: linear-gradient(
+    135deg,
+    var(--mcp-grad-1) 0%,
+    var(--mcp-grad-2) 50%,
+    var(--mcp-grad-3) 100%
+  );
+}
+
+.md-tabs {
+  background: linear-gradient(
+    315deg,
+    var(--mcp-grad-1) 0%,
+    var(--mcp-grad-2) 50%,
+    var(--mcp-grad-3) 100%
+  );
+}
+
+.md-header {
+  box-shadow: 0 2px 8px rgba(19, 17, 28, 0.4);
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  font-weight: 700;
+}
+
+.md-typeset h1 {
+  color: #0d9488;
+}
+
+/* Gradient-Linie unter h2-Überschriften */
+.md-typeset h2 {
+  border-bottom: none;
+  padding-bottom: 0.2em;
+  background-image: linear-gradient(
+    90deg,
+    var(--mcp-grad-3) 0%,
+    var(--mcp-accent) 100%
+  );
+  background-position: 0 100%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
+.md-typeset a {
+  color: var(--md-accent-fg-color);
+  font-weight: 600;
+}
+
+/* Buttons mit Gradient */
+.md-typeset .md-button--primary {
+  background: linear-gradient(
+    135deg,
+    var(--mcp-grad-2) 0%,
+    var(--mcp-grad-3) 100%
+  );
+  border: none;
+  color: #ffffff;
+}
+
+.md-typeset .md-button--primary:hover {
+  background: linear-gradient(
+    135deg,
+    var(--mcp-grad-3) 0%,
+    var(--mcp-accent) 140%
+  );
+}

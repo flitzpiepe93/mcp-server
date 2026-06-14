@@ -18,7 +18,7 @@ Der Server wird von Anfang an so gestaltet, dass er später **horizontal skalier
   [Repository Pattern](../roadmap/02-repository-pattern.md) ist die DB entkoppelt und kann
   unabhängig skaliert/ausgetauscht werden (z.B. PostgreSQL mit Connection-Pooling und
   Read-Replicas). Der Pool wird im Lifespan des Servers gehalten – Details siehe
-  [Datenbankarchitektur](database-architecture.md#connection-pool--lifespan).
+  [Datenbankarchitektur](database-architecture.md#connection-pool-lifespan).
 
 ## Zielentwurf (spätere Ausbaustufe): containerbasiert auf AWS
 
@@ -43,7 +43,7 @@ Für den hochverfügbaren Betrieb ist ein **containerbasierter Ansatz** vorgeseh
 - Der **Audit-Trail** wird in einen separaten, abgeschotteten (confidential) Account
   weitergeleitet und dort **append-only** abgelegt – getrennte Zugriffsrechte machen die
   Logs manipulationssicher. Im POC wird stattdessen nur ins Terminal geloggt. Siehe
-  [Nachvollziehbarkeit & Compliance](audit-compliance.md#wohin-geloggt-wird--manipulationssicherheit).
+  [Nachvollziehbarkeit & Compliance](audit-compliance.md#wohin-geloggt-wird-manipulationssicherheit).
 
 > Dies skizziert nur, wie der Betrieb in der Praxis auf AWS aussehen könnte. Der POC wird
 > **lokal** umgesetzt, nicht auf AWS.

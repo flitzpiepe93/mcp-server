@@ -1,4 +1,4 @@
-# Schritt 1 – FastMCP: Client + Server über HTTP
+# Schritt 1 – Client + Server über HTTP
 
 ## Ziel
 

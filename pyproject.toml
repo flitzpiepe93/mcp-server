@@ -1,5 +1,18 @@
-# Root configuration for project-wide tooling only (Ruff).
-# Intentionally NO [project] section: server/ and client/ are standalone packages.
+# Root configuration for project-wide tooling (Ruff) and the documentation site.
+# server/ and client/ remain standalone packages; this root is not itself packaged.
+
+[project]
+name = "mcp-server-demo"
+version = "0.0.0"
+requires-python = ">=3.11"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.5",
+]
 
 [tool.ruff]
 target-version = "py311"
