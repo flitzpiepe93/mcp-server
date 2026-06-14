@@ -1,19 +1,12 @@
 import time
 
-from fastmcp.server.dependencies import get_access_token
+from fastmcp.server import dependencies as deps
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools.tool import ToolResult
 from fastmcp.utilities.logging import get_logger
 from mcp.types import CallToolRequestParams
 
 logger = get_logger("audit")
-
-
-def _agent() -> str:
-    token = get_access_token()
-    if token is None:
-        return "anonymous"
-    return token.client_id or "unknown"
 
 
 class AuditMiddleware(Middleware):
@@ -28,7 +21,7 @@ class AuditMiddleware(Middleware):
         context: MiddlewareContext[CallToolRequestParams],
         call_next: CallNext[CallToolRequestParams, ToolResult],
     ) -> ToolResult:
-        agent = _agent()
+        agent = deps.get_access_token().client_id
         tool = context.message.name
         args = context.message.arguments
         start = time.perf_counter()

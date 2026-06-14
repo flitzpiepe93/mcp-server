@@ -47,3 +47,14 @@ async def test_get_survival_rate_is_listed(authenticated, client):
         tools = await client.list_tools()
 
     assert "get_survival_rate" in {t.name for t in tools}
+
+
+async def test_audit_log_records_agent_identity(authenticated, client, caplog):
+    """The audit trail must attribute the call to the authenticated agent,
+    not fall back to ``anonymous`` — guards the dependencies import in audit.py.
+    """
+    with caplog.at_level("INFO", logger="fastmcp.audit"):
+        async with client:
+            await client.call_tool("get_survival_rate", {"group_by": "sex"})
+
+    assert "agent=example-agent" in caplog.text
