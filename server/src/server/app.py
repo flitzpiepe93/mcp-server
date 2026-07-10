@@ -73,8 +73,10 @@ def build_server(
 
 def main() -> None:
     settings = AuthSettings.from_env()
-    # Base scope every agent must carry, so a tool that forgets its own
-    # require_scopes is not silently open. Per-tool scopes are enforced on top.
+    # required_scopes is a coarse admission gate: every token must carry
+    # titanic:access to authenticate at all. It is NOT a per-tool guard — a
+    # tool that omits its own require_scopes would be open to any admitted
+    # token. Fine-grained authorization lives in each tool's require_scopes.
     # audience ties tokens to this specific MCP server: a token minted for a
     # different service in the same realm is rejected.
     auth = KeycloakAuthProvider(
