@@ -1,40 +1,40 @@
-# Sicherheit & Zugriffskontrolle
+# Security & access control
 
-> **Frage:** Wie stellen wir sicher, dass Agents nur auf die Daten zugreifen können, für
-> die sie berechtigt sind?
+> **Question:** How do we ensure that agents can only access the data they are
+> authorized for?
 
-## Ansatz
+## Approach
 
-Zugriffskontrolle über **Keycloak (OAuth2/OIDC)**. Jeder Agent authentifiziert sich und
-erhält ein Token mit Scopes/Claims. Der MCP-Server validiert das Token und leitet daraus
-ab, welche Tools der Agent aufrufen darf (Tool-Ebene zuerst; feinere Durchsetzung später).
+Access control runs through **Keycloak (OAuth2/OIDC)**. Each agent authenticates and
+receives a token with scopes/claims. The MCP server validates the token and uses it
+to decide which tools the agent may call (tool level first, finer enforcement later).
 
-## Schichten
+## Layers
 
-1. **Authentifizierung**: Wer ist der Agent? → Token von Keycloak, validiert vom Server.
-   Eine Identität wird mit [Keycloak (Schritt 3)](../roadmap/03-keycloak-scopes.md)
-   eingeführt; davor ([Schritt 1–2](../roadmap/01-fastmcp.md)) existiert keine Identität.
-2. **Autorisierung**: Was darf der Agent? → Scopes/Claims aus dem Token werden über eine
-   **Mapping-Schicht** auf konkrete Berechtigungen übersetzt.
-3. **Durchsetzung**: Die Scopes regeln zunächst nur die **Tool-Ebene** – also welche
-   Tools/Aktionen ein Agent überhaupt aufrufen darf. Eine feinere Durchsetzung am
-   [Repository](../roadmap/02-repository-pattern.md) (z.B. Filterung der erlaubten
-   Zeilen/Spalten) ist ein späterer Ausbauschritt.
+1. **Authentication**: Who is the agent? → A token from Keycloak, validated by the server.
+   Identity arrives with [Keycloak (step 3)](../roadmap/03-keycloak-scopes.md);
+   before that ([steps 1–2](../roadmap/01-fastmcp.md)) there is no identity.
+2. **Authorization**: What may the agent do? → The token's scopes are enforced per tool via
+   FastMCP's built-in `require_scopes(...)`; no dedicated mapping layer was needed.
+3. **Enforcement**: The scopes initially govern only the **tool level** – which
+   tools and actions an agent may call at all. Finer enforcement at the
+   [Repository](../roadmap/02-repository-pattern.md) (e.g. filtering the permitted
+   rows or columns) is a later expansion step.
 
-## Wo AuthN und AuthZ stattfinden
+## Where AuthN and AuthZ take place
 
-Authentifizierung und Autorisierung werden bewusst getrennt platziert:
+Authentication and authorization are deliberately kept separate:
 
-- **Authentifizierung (AuthN) am Rand**: *Wer bist du?* Diese Prüfung gehört an den
-  zentralen Eingangspunkt. Im AWS-Zielentwurf übernimmt das das **API Gateway** (validiert
-  das Token, bevor eine Anfrage den Server erreicht) – siehe
-  [Infrastruktur & Betrieb](infrastructure-operations.md). Im **POC** gibt es kein
-  Gateway, daher übernimmt der **Server selbst** die Token-Validierung.
-- **Autorisierung (AuthZ) im Server**: *Was darfst du?* Diese Entscheidung bleibt
-  **immer** im Server, weil nur er die Tools und Daten kennt. Das Gateway kann nicht
-  wissen, dass ein bestimmter Agent ein bestimmtes Tool nicht aufrufen darf.
+- **Authentication (AuthN) at the edge**: *Who are you?* This check belongs at the
+  central entry point. In the AWS target design the **API Gateway** handles it, validating
+  the token before a request reaches the server – see
+  [Infrastructure & operations](infrastructure-operations.md). The **PoC** has no
+  gateway, so the **server itself** validates the token.
+- **Authorization (AuthZ) in the server**: *What may you do?* This decision **always**
+  stays in the server, because only the server knows the tools and data. The gateway cannot
+  know that a particular agent may not call a particular tool.
 
-Damit der Wechsel POC → AWS kein Umschreiben bedeutet, liest der Server die Identität
-stets aus den **geprüften Claims im Request** – unabhängig davon, *wer* sie validiert hat
-(Server im POC, Gateway auf AWS). Der spätere Umstieg ist dann nur das Weglassen der
-lokalen Token-Validierung, kein Umbau der AuthZ-Logik.
+To keep the PoC → AWS transition from becoming a rewrite, the server always reads the identity
+from the **verified claims in the request** – regardless of *who* validated them
+(the server in the PoC, the gateway on AWS). The later switch then just drops the
+local token validation; it does not rebuild the AuthZ logic.

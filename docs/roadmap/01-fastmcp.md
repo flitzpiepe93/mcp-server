@@ -1,30 +1,30 @@
-# Schritt 1 – Client + Server über HTTP
+# Step 1 – Client + Server over HTTP
 
-## Ziel
+## Goal
 
-Eine lauffähige Grundstruktur aus **MCP-Client und MCP-Server** auf Basis von FastMCP,
-die über **Streamable HTTP** kommuniziert. In diesem Schritt geht es ausschließlich um
-das Grundgerüst: Client spricht Server, Server stellt MCP bereit.
+A working baseline: an **MCP client and MCP server** built on FastMCP,
+communicating over **Streamable HTTP**. This step covers only
+the scaffolding: the client talks to the server, and the server exposes MCP.
 
-## Warum HTTP von Anfang an
+## Why HTTP from the start
 
-Das Ziel sind mehrere Remote-Agents über einen zentralen Server. Startet man direkt mit
-Streamable HTTP, entfällt ein späterer Transport-Wechsel. FastMCP unterstützt HTTP
-direkt; für lokale Tests läuft der Server einfach gegen `localhost`. Der Mehraufwand
-gegenüber `stdio` ist minimal (Host/Port/Pfad statt Prozess-Pipe).
+The target is multiple remote agents talking to a central server. Starting with
+Streamable HTTP avoids a later transport switch. FastMCP supports HTTP
+directly, and for local tests the server just runs against `localhost`. The extra effort
+over `stdio` is minimal: host/port/path instead of a process pipe.
 
-## Inhalt
+## Contents
 
-- FastMCP-Server mit HTTP-Transport.
-- MCP-Client, der sich gegen den Server verbindet.
-- Grundstruktur des Projekts (wird vom Nutzer angelegt; die Implementierung orientiert
-  sich daran).
+- FastMCP server with HTTP transport.
+- MCP client that connects to the server.
+- Basic project structure (created by the user; the implementation builds
+  on it).
 
-## Abgrenzung
+## Out of scope
 
-- **Keine Identität / keine Authentifizierung** in diesem Schritt – die Identität kommt
-  mit [Keycloak (Schritt 3)](03-keycloak-scopes.md) und steht damit dem
-  [Auditing (Schritt 4)](04-auditing.md) zur Verfügung.
-- Noch keine Datenbankabstraktion (→ [Schritt 2](02-repository-pattern.md)).
-- Noch keine lesenden Tools mit echten Daten – diese folgen mit dem
+- **No identity, no authentication** in this step. Identity arrives
+  with [Keycloak (Step 3)](03-keycloak-scopes.md) and then feeds into
+  [Auditing (Step 4)](04-auditing.md).
+- No database abstraction yet (→ [Step 2](02-repository-pattern.md)).
+- No read tools with real data yet; those come with the
   [Repository](02-repository-pattern.md).

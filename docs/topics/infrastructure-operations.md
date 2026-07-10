@@ -1,49 +1,49 @@
-# Infrastruktur & Betrieb
+# Infrastructure & operations
 
-> **Frage:** Wie stellen wir sicher, dass der Server auch bei hoher Last verfügbar
-> bleibt?
+> **Question:** How do we ensure that the server remains available even under high
+> load?
 
-> **Hinweis:** Hochverfügbarkeit und der konkrete Deployment-Aufbau sind eine **spätere
-> Ausbaustufe**. In den ersten Schritten läuft der Server lokal bzw. als einzelne
-> Instanz. Hier wird nur der angestrebte Zielentwurf festgehalten.
+> **Note:** High availability and the concrete deployment setup are a **later
+> expansion stage**. In the first steps the server runs locally or as a single
+> instance. Only the intended target design is recorded here.
 
-## Voraussetzung im Design
+## Prerequisite in the design
 
-Der Server wird von Anfang an so gestaltet, dass er später **horizontal skalierbar** ist:
+The server is designed from the start to scale **horizontally** later:
 
-- **Zustandsloser Server**: Der MCP-Server hält keinen Sitzungszustand lokal. Identität
-  kommt pro Anfrage aus dem Token (Keycloak), sodass mehrere Instanzen parallel betrieben
-  werden können.
-- **Datenbank als getrennte, skalierbare Ressource**: Durch das
-  [Repository Pattern](../roadmap/02-repository-pattern.md) ist die DB entkoppelt und kann
-  unabhängig skaliert/ausgetauscht werden (z.B. PostgreSQL mit Connection-Pooling und
-  Read-Replicas). Der Pool wird im Lifespan des Servers gehalten – Details siehe
-  [Datenbankarchitektur](database-architecture.md#connection-pool-lifespan).
+- **Stateless server**: the MCP server holds no session state locally. Identity
+  comes per request from the token (Keycloak), so multiple instances can run
+  in parallel.
+- **Database as a separate, scalable resource**: the
+  [Repository Pattern](../roadmap/02-repository-pattern.md) decouples the DB so it can be
+  scaled or swapped independently (e.g. PostgreSQL with connection pooling and
+  read replicas). The pool is held in the server's lifespan – for details, see
+  [Database architecture](database-architecture.md#connection-pool-lifespan).
 
-## Zielentwurf (spätere Ausbaustufe): containerbasiert auf AWS
+## Target design (later expansion stage): container-based on AWS
 
-Für den hochverfügbaren Betrieb ist ein **containerbasierter Ansatz** vorgesehen:
+High-availability operation calls for a **container-based approach**:
 
-- MCP-Server als Container auf **ECS**.
-- Ein **Load Balancer** davor, intern bereitgestellt über ein **API Gateway**.
-- **Health-Checks** und **automatische Skalierung** sorgen für Hochverfügbarkeit.
-- Die **ECS-Tasks** müssen über **mehrere Availability Zones (AZs)** verteilt laufen,
-  damit der Ausfall einer AZ den Dienst nicht beeinträchtigt.
-- Die **Datenbank** würde man hier höchstwahrscheinlich als **managed Service über RDS**
-  betreiben (PostgreSQL) – statt die SQLite-Datei aus dem POC. RDS übernimmt Backups,
-  Patching, Failover und Multi-AZ und passt zum zustandslosen, mehrinstanzigen Betrieb,
-  für den eine lokale SQLite-Datei ohnehin nicht geeignet ist.
-- **Authentifizierung** würde hier voraussichtlich über **Cognito** laufen, durchgesetzt
-  bereits am **API Gateway** – der Server erhält nur authentifizierte Anfragen. Cognito
-  übernimmt damit im AWS-Zielentwurf die IdP-Rolle, die im POC
-  [Keycloak](../roadmap/03-keycloak-scopes.md) innehat. Die **Autorisierung** bleibt
-  weiterhin im Server (Scope-/Claim-Mapping, Durchsetzung am
+- MCP server as a container on **ECS**.
+- A **Load Balancer** in front, exposed internally through an **API Gateway**.
+- **Health checks** and **automatic scaling** ensure high availability.
+- The **ECS tasks** run distributed across **multiple Availability Zones (AZs)**,
+  so the failure of one AZ does not affect the service.
+- The **database** would most likely run as a **managed service via RDS**
+  (PostgreSQL) – instead of the SQLite file from the PoC. RDS handles backups,
+  patching, failover and multi-AZ, and fits stateless, multi-instance operation,
+  which a local SQLite file is not suited to anyway.
+- **Authentication** would presumably run via **Cognito**, enforced
+  already at the **API Gateway** – the server receives only authenticated requests. Cognito
+  thus takes on the IdP role in the AWS target design that
+  [Keycloak](../roadmap/03-keycloak-scopes.md) plays in the PoC. **Authorization** stays
+  in the server (scope/claim mapping, enforcement at the
   [Repository](../roadmap/02-repository-pattern.md)).
-- **Rate-Limits** wären langfristig ebenfalls denkbar, naheliegend am API Gateway.
-- Der **Audit-Trail** wird in einen separaten, abgeschotteten (confidential) Account
-  weitergeleitet und dort **append-only** abgelegt – getrennte Zugriffsrechte machen die
-  Logs manipulationssicher. Im POC wird stattdessen nur ins Terminal geloggt. Siehe
-  [Nachvollziehbarkeit & Compliance](audit-compliance.md#wohin-geloggt-wird-manipulationssicherheit).
+- **Rate limits** are also conceivable in the long term, again at the API Gateway.
+- The **audit trail** is forwarded to a separate, isolated (confidential) account
+  and stored there **append-only** – separate access rights make the
+  logs tamper-proof. The PoC uses terminal logging instead. See
+  [Auditability & compliance](audit-compliance.md#where-logging-goes-tamper-resistance).
 
-> Dies skizziert nur, wie der Betrieb in der Praxis auf AWS aussehen könnte. Der POC wird
-> **lokal** umgesetzt, nicht auf AWS.
+> This only sketches how operation could look in practice on AWS. The PoC is
+> implemented **locally**, not on AWS.

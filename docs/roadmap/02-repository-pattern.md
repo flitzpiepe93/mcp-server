@@ -1,37 +1,37 @@
-# Schritt 2 – Repository Pattern
+# Step 2 – Repository Pattern
 
-## Ziel
+## Goal
 
-Der Datenbankzugriff wird hinter ein **fachliches Repository-Interface** gezogen, sodass
-die Datenbank später ausgetauscht werden kann, ohne den Code des MCP-Servers zu ändern.
+Database access sits behind a **domain-level repository interface**, so
+the database can later be swapped out without touching the MCP server's code.
 
-## Warum
+## Why
 
-Das ist der zentrale Hebel für "SQLite jetzt, PostgreSQL später". Der MCP-Server kennt
-nur das Interface, nicht die konkrete Datenbank.
+This is the key lever for "SQLite now, PostgreSQL later". The MCP server knows
+only the interface, not the concrete database.
 
-Ein zweiter Vorteil ist die **Testbarkeit**: Weil der Server nur gegen das Interface
-programmiert, kann man in Tests eine schlanke In-Memory-Implementierung (z.B.
-`MemoryRepository`) injizieren, statt eine echte Datenbank hochzufahren. Tests werden
-dadurch schneller, deterministisch und kommen ohne externe Infrastruktur aus.
+A second benefit is **testability**: because the server codes against the interface,
+tests can inject a lightweight in-memory implementation (e.g.
+`MemoryRepository`) instead of spinning up a real database. This keeps tests
+fast, deterministic, and free of external infrastructure.
 
-## Designentscheidungen
+## Design decisions
 
-- **Fachliches Interface, kein durchgereichtes SQL**: Das Repository bietet fachliche
-  Methoden an (z.B. `get_customer_by_id`), nicht generische SQL-Ausführung. Sonst leaken
-  DB-Details doch wieder in den MCP-Server.
-- **Interface als `Protocol`/ABC**: Eine abstrakte Definition, gegen die der Server
-  programmiert. Konkrete Implementierungen werden injiziert.
-- **SQLAlchemy als Default-Implementierung**: SQLAlchemy Core/ORM deckt SQLite **und**
-  PostgreSQL ab. Ein Wechsel zwischen beiden ist im Wesentlichen eine Frage der
-  Connection-URL.
+- **Domain-level interface, no pass-through SQL**: The repository offers domain-level
+  methods (e.g. `get_customer_by_id`) rather than generic SQL execution. Otherwise
+  DB details would leak back into the MCP server.
+- **Interface as `Protocol`/ABC**: An abstract definition that the server
+  codes against. Concrete implementations are injected.
+- **SQLAlchemy as the default implementation**: SQLAlchemy Core/ORM covers SQLite **and**
+  PostgreSQL. Switching between the two is mostly a matter of the
+  connection URL.
 
-## Abgrenzung zu anderen Datenbanken
+## Scope relative to other databases
 
-- **PostgreSQL**: über dieselbe SQLAlchemy-Implementierung abgedeckt.
-- **DynamoDB**: *nicht* über SQLAlchemy abgedeckt – das wäre eine eigene
-  Repository-Implementierung gegen dasselbe Interface. Das Pattern trägt das, ist aber
-  bewusst eine separate Implementierung.
+- **PostgreSQL**: covered by the same SQLAlchemy implementation.
+- **DynamoDB**: *not* covered by SQLAlchemy. That would be a separate
+  repository implementation against the same interface. The pattern supports this, but
+  deliberately as a separate implementation.
 
-Siehe auch [Datenbankarchitektur](../topics/database-architecture.md). Wie dieser Schritt
-konkret umgesetzt wurde, steht unter [Umsetzung: Repository & erstes Tool](../implementation/repository.md).
+See also [Database architecture](../topics/database-architecture.md). How this step
+was concretely implemented is described under [Implementation: Repository & first tool](../implementation/repository.md).

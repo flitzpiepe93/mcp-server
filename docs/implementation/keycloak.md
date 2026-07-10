@@ -1,55 +1,54 @@
-# Umsetzung: Keycloak & Scopes
+# Implementation: Keycloak & scopes
 
-Konkretisiert [Schritt 3 – Keycloak & Scopes](../roadmap/03-keycloak-scopes.md).
+Concretizes [Step 3 – Keycloak & Scopes](../roadmap/03-keycloak-scopes.md).
 
-## Docker-Setup
+## Docker setup
 
-Der Stack läuft über `docker-compose.yml`: **Keycloak**, der **MCP-Server** und ein
-**Client** (für den Token-Flow). Alle drei kommunizieren über **Docker-Servicenamen**
-(`keycloak:8080`, `mcp-server:8000`), damit Client und Server Keycloak unter **derselben**
-URL sehen. Keycloak importiert beim Start einen versionierten Realm
+The stack runs via `docker-compose.yml`: **Keycloak**, the **MCP server** and a
+**client** (for the token flow). All three communicate through **Docker service names**
+(`keycloak:8080`, `mcp-server:8000`), so client and server see Keycloak under the **same**
+URL. Keycloak imports a versioned realm at startup
 (`keycloak/realm-export.json`).
 
-Der Client ist ein kurzlebiges Skript (Token holen, Tool aufrufen, beenden), daher läuft
-er nicht als Dauerdienst, sondern auf Abruf:
+The client is a short-lived script (fetch token, call tool, exit), so it runs on
+demand rather than as a permanent service:
 
 ```bash
-cp .env.example .env          # einmalig: lokale Konfiguration
-docker compose up -d          # Keycloak + MCP-Server
+cp .env.example .env          # one-time: local configuration
+docker compose up -d          # Keycloak + MCP server
 docker compose run --rm client
 ```
 
-## Authentifizierung
+## Authentication
 
-Der Server validiert eingehende Tokens selbst mit dem **`KeycloakAuthProvider`** von
-FastMCP (POC ohne Gateway). Der Provider prüft Signatur (JWKS), **Issuer** und
-**Audience** (`titanic-mcp`) – Letztere stellt sicher, dass nur Tokens akzeptiert werden,
-die für *diesen* Server ausgestellt wurden, nicht für einen anderen Dienst im selben
-Realm.
+The server validates incoming tokens itself with FastMCP's **`KeycloakAuthProvider`**
+(PoC without a gateway). The provider checks signature (JWKS), **issuer** and
+**audience** (`titanic-mcp`). The audience check ensures the server accepts only
+tokens issued for *this* server, not for another service in the same realm.
 
-## Autorisierung (Scopes)
+## Authorization (scopes)
 
-Die Scopes sind auf den Titanic-MCP namespaced:
+The scopes are namespaced to the Titanic MCP:
 
-- **`titanic:access`** – Basis-Scope, den jeder Agent tragen muss (global am Provider
-  erzwungen). Verhindert, dass ein Tool ohne eigene Scope-Prüfung versehentlich offen ist.
-- **`titanic:survival:read`** – Tool-Scope, pro Tool über `require_scopes(...)` erzwungen
+- **`titanic:access`** — base scope that every agent must carry (enforced globally at the
+  provider). It keeps a tool without its own scope check from being accidentally open.
+- **`titanic:survival:read`** — tool scope, enforced per tool via `require_scopes(...)`
   (`get_survival_rate`).
 
-Der Agent authentifiziert sich per **Client-Credentials-Flow** (Service-Account
-`example-agent`), passend zu einem Agenten ohne menschlichen Login.
+The agent authenticates via the **client credentials flow** (service account
+`example-agent`), which suits an agent that has no human login.
 
-## Konfiguration
+## Configuration
 
-Geteilte Werte (Service-Account-Secret, Admin-Credentials) liegen zentral in einer
-**`.env`** (Vorlage: `.env.example`, committet; die echte `.env` ist git-ignoriert).
-`docker-compose` löst daraus auf; es gibt **keine** hartkodierten Secrets im Repo und
-keine stillen Default-Werte – fehlt eine Variable, bricht der Start mit einem Fehler ab.
+Shared values (service account secret, admin credentials) live centrally in a
+**`.env`** (template: `.env.example`, committed; the real `.env` is git-ignored).
+`docker-compose` resolves from it. There are **no** hardcoded secrets in the repo
+and no silent defaults; if a variable is missing, startup aborts with an error.
 
-## Offen / später
+## Open / later
 
-- **Audience-Granularität & weitere Clients**: Sobald mehrere Agenten/Clients existieren,
-  sollten Audiences/Scopes pro Client geprüft werden.
-- **`start-dev`** ist bewusst Entwicklungs-Modus (kein HTTPS-Zwang, In-Memory-DB). Im
-  AWS-Zielentwurf übernimmt ohnehin Cognito + Gateway (siehe
-  [Sicherheit & Zugriffskontrolle](../topics/security-access-control.md)).
+- **Audience granularity & more clients**: once multiple agents/clients exist,
+  audiences and scopes should be checked per client.
+- **`start-dev`** is deliberately development mode (no HTTPS enforcement, in-memory DB). In the
+  AWS target design, Cognito and the gateway take over (see
+  [Security & access control](../topics/security-access-control.md)).

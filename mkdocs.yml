@@ -1,9 +1,9 @@
-site_name: MCP-Datenbankserver für KI-Agenten
-site_description: Kontrollierter Datenbankzugriff für KI-Agenten über MCP-Tools
+site_name: MCP Database Server for AI Agents
+site_description: Controlled database access for AI agents through MCP tools
 
 theme:
   name: material
-  language: de
+  language: en
   icon:
     logo: material/database
   palette:
@@ -12,13 +12,13 @@ theme:
       accent: teal
       toggle:
         icon: material/weather-sunny
-        name: Helles Theme
+        name: Light theme
     - scheme: default
       primary: teal
       accent: teal
       toggle:
         icon: material/weather-night
-        name: Dunkles Theme
+        name: Dark theme
   features:
     - navigation.tabs
     - navigation.sections
@@ -43,20 +43,20 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - Überblick: index.md
+  - Overview: index.md
   - Roadmap:
-      - 1 – FastMCP über HTTP: roadmap/01-fastmcp.md
-      - 2 – Repository Pattern: roadmap/02-repository-pattern.md
-      - 3 – Keycloak & Scopes: roadmap/03-keycloak-scopes.md
+      - 1 – FastMCP over HTTP: roadmap/01-fastmcp.md
+      - 2 – Repository pattern: roadmap/02-repository-pattern.md
+      - 3 – Keycloak & scopes: roadmap/03-keycloak-scopes.md
       - 4 – Auditing: roadmap/04-auditing.md
-  - Umsetzung:
-      - Überblick: implementation/index.md
-      - Repository & erstes Tool: implementation/repository.md
-      - Keycloak & Scopes: implementation/keycloak.md
+  - Implementation:
+      - Overview: implementation/index.md
+      - Repository & first tool: implementation/repository.md
+      - Keycloak & scopes: implementation/keycloak.md
       - Auditing: implementation/auditing.md
-  - Themen:
-      - Sicherheit & Zugriffskontrolle: topics/security-access-control.md
-      - Nachvollziehbarkeit & Compliance: topics/audit-compliance.md
-      - Datenbankarchitektur: topics/database-architecture.md
-      - Infrastruktur & Betrieb: topics/infrastructure-operations.md
-      - Agent-Lifecycle: topics/agent-lifecycle.md
+  - Topics:
+      - Security & access control: topics/security-access-control.md
+      - Auditability & compliance: topics/audit-compliance.md
+      - Database architecture: topics/database-architecture.md
+      - Infrastructure & operations: topics/infrastructure-operations.md
+      - Agent lifecycle: topics/agent-lifecycle.md

@@ -1,44 +1,42 @@
-# Schritt 3 – Scope-basierte Zugriffskontrolle
+# Step 3 – Scope-based access control
 
-## Ziel
+## Goal
 
-Zugriffskontrolle über **Keycloak (OAuth2/OIDC)**: Agents erhalten Tokens mit
-Scopes/Claims, und der MCP-Server schränkt darüber ein, welche Tools ein Agent aufrufen
-darf (Tool-Ebene zuerst; feinere Durchsetzung später).
+Access control via **Keycloak (OAuth2/OIDC)**: agents receive tokens with
+scopes/claims, and the MCP server uses these to restrict which tools an agent
+may call (tool level first, finer enforcement later).
 
-## Warum Keycloak
+## Why Keycloak
 
-Standardkonforme, etablierte Lösung für OAuth2/OIDC. MCP unterstützt OAuth-basierte
-Authentifizierung offiziell. Keycloak übernimmt außerdem das
-[Agent-Lifecycle-Management](../topics/agent-lifecycle.md) (Onboarding/Offboarding) als
-Identity Provider.
+A standards-compliant, established solution for OAuth2/OIDC. MCP officially supports
+OAuth-based authentication. As an identity provider, Keycloak also handles the
+[agent lifecycle management](../topics/agent-lifecycle.md) (onboarding/offboarding).
 
-## Scope-Durchsetzung
+## Scope enforcement
 
-Keycloak liefert Scopes/Claims im Token; der Server setzt daraus durch, welche Tools ein
-Agent aufrufen darf. Ursprünglich war hier eine selbst gebaute **Mapping-Schicht**
-(Scope → Berechtigung) eingeplant – in der Umsetzung stellte sich heraus, dass **FastMCP
-das mit `require_scopes` bereits eingebaut mitbringt**. Ein eigenes Mapping war damit
-nicht nötig.
+Keycloak delivers scopes/claims in the token, and the server uses these to enforce which tools an
+agent may call. We originally planned a self-built **mapping layer**
+(scope → permission), but during implementation it turned out that **FastMCP
+provides this built in via `require_scopes`**. A custom mapping was therefore
+unnecessary.
 
-Der reale Aufwand lag stattdessen woanders: beim **Container-Networking/Issuer** (Client
-und Server müssen Keycloak unter derselben URL sehen) und beim **Realm-Setup** (Scopes,
-Audience, Service-Account).
+The real effort lay elsewhere: in **container networking/issuer** (the client
+and server must see Keycloak under the same URL) and in the **realm setup** (scopes,
+audience, service account).
 
-Zunächst greifen die Scopes nur auf **Tool-Ebene** – also welche Tools/Aktionen ein Agent
-überhaupt aufrufen darf. Eine feinere Durchsetzung (welche Tabellen/Zeilen/Spalten ein
-Agent sehen darf) ist ein späterer Ausbauschritt.
+Initially the scopes apply only at the **tool level**, meaning which tools/actions an agent
+may call at all. Finer enforcement (which tables/rows/columns an
+agent may see) is a later expansion step.
 
-## Integration mit den vorherigen Schritten
+## Integration with the previous steps
 
-- Führt erstmals eine **Agent-Identität** ein: echte Token-Validierung und Claims gegen
-  Keycloak. Bis hierhin ([Schritt 1–2](01-fastmcp.md)) gibt es keine Identität.
-- Legt damit die Grundlage für den nachfolgenden [Audit-Layer](04-auditing.md): erst mit
-  dieser verlässlichen, externen Identität wird das Logging pro Agent sinnvoll.
-- Setzt die Berechtigungen zunächst auf Tool-Ebene durch (welche Tools ein Agent aufrufen
-  darf). Eine feinere Durchsetzung am [Repository](02-repository-pattern.md)
-  (z.B. Row-Level-Filterung anhand der Scopes) ist ein späterer Ausbauschritt.
+- Introduces an **agent identity** for the first time: real token validation and claims against
+  Keycloak. Up to this point ([Steps 1–2](01-fastmcp.md)) there is no identity.
+- This lays the foundation for the [audit layer](04-auditing.md) that follows: per-agent logging becomes meaningful only with
+  this reliable, external identity.
+- Enforces permissions initially at the tool level (which tools an agent may call). Finer enforcement at the [Repository](02-repository-pattern.md)
+  (e.g. row-level filtering based on the scopes) is a later expansion step.
 
-Siehe auch [Sicherheit & Zugriffskontrolle](../topics/security-access-control.md). Wie
-dieser Schritt konkret umgesetzt wurde, steht unter
-[Umsetzung: Keycloak & Scopes](../implementation/keycloak.md).
+See also [Security & access control](../topics/security-access-control.md). How
+this step was concretely implemented is described under
+[Implementation: Keycloak & Scopes](../implementation/keycloak.md).

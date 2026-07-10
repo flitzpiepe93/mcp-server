@@ -1,38 +1,36 @@
-# Schritt 4 – Auditing Layer
+# Step 4 – Auditing Layer
 
-## Ziel
+## Goal
 
-Eine eigene Schicht, die festhält, **welcher Agent wann welche Daten abgefragt hat** –
-als Grundlage für Nachvollziehbarkeit und Compliance.
+A dedicated layer that records **which agent queried which data and when**,
+as a foundation for auditability and compliance.
 
-## Warum zuletzt
+## Why last
 
-Auditing wird zuletzt angegangen, weil es zwei Voraussetzungen aus den vorherigen
-Schritten braucht:
+Auditing comes last because it depends on two prerequisites from the previous
+steps:
 
-- Ein **lesendes Tool**, das echte Daten aus dem [Repository](02-repository-pattern.md)
-  liefert ([Schritt 2](02-repository-pattern.md)) – vorher gibt es nichts Sinnvolles zu
-  protokollieren.
-- Eine **Agent-Identität** aus [Keycloak](03-keycloak-scopes.md)
-  ([Schritt 3](03-keycloak-scopes.md)) – Audit-Logs sind erst aussagekräftig, wenn jede
-  Anfrage einer externen, verlässlichen Identität (Claims aus dem Token) zugeordnet werden
-  kann.
+- A **read-only tool** that delivers real data from the [Repository](02-repository-pattern.md)
+  ([Step 2](02-repository-pattern.md)). Before that there is nothing meaningful to
+  log.
+- An **agent identity** from [Keycloak](03-keycloak-scopes.md)
+  ([Step 3](03-keycloak-scopes.md)). Audit logs are meaningful only when every
+  request can be attributed to an external, reliable identity (claims from the token).
 
-## Inhalt
+## Contents
 
-- Protokollierung pro Anfrage: Agent-Identität, Zeitpunkt, aufgerufenes Tool und
-  Abfrageparameter.
-- Auditing als eigene Schicht (z.B. Decorator/Middleware um die Tool-Aufrufe), damit die
-  Tool-Logik selbst schlank bleibt.
-- Persistenz des Audit-Trails: im **POC** einfach ins Terminal (stdout). Im
-  **AWS-Zielentwurf** wird der Trail in einen separaten, abgeschotteten (confidential)
-  Account geschrieben – Details siehe [Nachvollziehbarkeit & Compliance](../topics/audit-compliance.md).
+- Per-request logging: agent identity, timestamp, invoked tool, and
+  query parameters.
+- Auditing as a dedicated layer (e.g. a decorator/middleware around the tool calls), so the
+  tool logic itself stays lean.
+- Persistence of the audit trail: in the **PoC** simply to the terminal (stdout). In the
+  **AWS target design** the trail is written to a separate, isolated (confidential)
+  account; for details see [Auditability & compliance](../topics/audit-compliance.md).
 
-## Abgrenzung
+## Out of scope
 
-- Setzt die über [Keycloak](03-keycloak-scopes.md) bereitgestellte Agent-Identität voraus.
-- Berechtigungsentscheidungen selbst (wer darf was) liegen in
-  [Schritt 3](03-keycloak-scopes.md); hier wird nur protokolliert.
+- Authorization decisions themselves (who may do what) live in
+  [Step 3](03-keycloak-scopes.md); this layer only logs.
 
-Siehe auch [Nachvollziehbarkeit & Compliance](../topics/audit-compliance.md). Wie dieser
-Schritt konkret umgesetzt wurde, steht unter [Umsetzung: Auditing](../implementation/auditing.md).
+See also [Auditability & compliance](../topics/audit-compliance.md). How this
+step was concretely implemented is described under [Implementation: Auditing](../implementation/auditing.md).

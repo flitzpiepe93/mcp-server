@@ -1,29 +1,37 @@
-# Umsetzung: Auditing
+# Implementation: Auditing
 
-Konkretisiert [Schritt 4 – Auditing Layer](../roadmap/04-auditing.md).
+Concretizes [Step 4 – Auditing Layer](../roadmap/04-auditing.md).
 
-Das Auditing ist als **FastMCP-Middleware** (`AuditMiddleware`) umgesetzt, die sich um
-jeden Tool-Aufruf legt (`on_call_tool`). Dadurch bleibt die Tool-Logik selbst frei von
-Logging-Code, und jede künftige Tool-Funktion wird automatisch mit erfasst.
+Auditing is implemented as **FastMCP middleware** (`AuditMiddleware`) that wraps
+every tool call (`on_call_tool`). This keeps the tool logic free of logging code,
+and every future tool function is captured automatically.
 
-## Was protokolliert wird
+## What gets logged
 
-Pro Aufruf eine Zeile mit:
+One line per call with:
 
-- **Agent**: die Identität aus dem geprüften Keycloak-Token – im Client-Credentials-Flow
-  die `client_id` (via `get_access_token()`). Ohne Token (z.B. Tests) `anonymous`.
-- **Tool**: der aufgerufene Tool-Name.
-- **Args**: die Abfrageparameter.
-- **Dauer**: die Ausführungszeit in Millisekunden.
+- **Agent**: the identity from the validated Keycloak token — in the client credentials flow
+  the `client_id` (via `get_access_token()`).
+- **Tool**: the tool name that was called.
+- **Args**: the query parameters.
+- **Duration**: the execution time in milliseconds.
 
-Schlägt der Aufruf fehl, wird stattdessen eine `tool_error`-Zeile mit der Fehlermeldung
-geschrieben und die Ausnahme weitergereicht (das Audit verschluckt keine Fehler).
+If the call fails, the middleware writes a `tool_error` line with the error message
+instead and re-raises the exception (the audit does not swallow errors).
 
-Bewusst **nicht** protokolliert wird der **Ergebnis-Inhalt oder -Umfang** – der
-Audit-Trail hält fest, *wer was angefragt* hat, nicht *was zurückkam*.
+The **result content and size** are deliberately **not** logged: the audit trail
+records *who requested what*, not *what came back*.
 
-## Wohin geloggt wird
+There is an honest limit here worth naming: the query parameters themselves can be
+sensitive. A filter value — say a customer ID passed to narrow a query — reveals
+*which* record was of interest, even though the result stays out of the log. For
+the PoC this is acceptable, since the parameters are what make the audit trail
+useful in the first place. In production the answer is per-argument handling:
+mask or hash the values that identify a subject while keeping the ones needed for
+accountability.
 
-Das Audit schreibt **server-seitig** über den FastMCP-Logger ins Terminal (stdout).
-Das entspricht der POC-Vorgabe (einfaches Terminal-Logging); der
-AWS-Zielentwurf leitet denselben Trail später in einen abgeschotteten Account um.
+## Where it logs to
+
+The audit writes **server-side** through the FastMCP logger to the terminal (stdout).
+This matches the PoC requirement (simple terminal logging); the AWS target design
+later routes the same trail into an isolated account.

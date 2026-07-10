@@ -1,45 +1,45 @@
-# Nachvollziehbarkeit & Compliance
+# Auditability & compliance
 
-> **Frage:** Wie halten wir fest, welcher Agent wann welche Daten abgefragt hat?
+> **Question:** How do we record which agent queried which data and when?
 
-## Ansatz
+## Approach
 
-Ein eigener **Auditing Layer** ([Schritt 4](../roadmap/04-auditing.md)) protokolliert
-jede Anfrage. Voraussetzung ist eine Agent-Identität, die mit
-[Keycloak (Schritt 3)](../roadmap/03-keycloak-scopes.md) eingeführt wird – vorher
-existiert keine Identität.
+A dedicated **Auditing Layer** ([step 4](../roadmap/04-auditing.md)) logs
+every request. It requires an agent identity, which arrives with
+[Keycloak (step 3)](../roadmap/03-keycloak-scopes.md) – before that
+there is no identity.
 
-## Was wird protokolliert
+## What is logged
 
-- Agent-Identität (aus den Keycloak-Claims; im POC die `client_id`)
-- Zeitpunkt und Ausführungsdauer
-- Aufgerufenes Tool und Abfrageparameter
+- Agent identity (from the Keycloak claims; the `client_id` in the PoC)
+- Timestamp and execution duration
+- The tool called and its query parameters
 
-**Nicht** protokolliert wird der Ergebnis-Inhalt oder -Umfang: festgehalten wird, *wer was
-angefragt* hat, nicht *was zurückkam*. Details zur Umsetzung unter
-[Umsetzung: Auditing](../implementation/auditing.md).
+The result content and scope are **not** logged: we record *who requested what*,
+not *what came back*. For implementation details, see
+[Implementation: Auditing](../implementation/auditing.md).
 
-## Designentscheidung
+## Design decision
 
-Auditing ist eine **eigene Schicht** (z.B. Decorator/Middleware um Tool-Aufrufe), damit
-die Tool-Logik schlank bleibt und das Logging zentral und konsistent erfolgt.
+Auditing is a **dedicated layer** (e.g. a decorator or middleware around tool calls), so
+the tool logic stays lean and logging happens centrally and consistently.
 
-Die Reihenfolge in der [Roadmap](../index.md) ist bewusst: erst Grundgerüst und ein
-lesendes Tool, dann mit Keycloak (Schritt 3) die Identität und Berechtigungen, und zuletzt
-das Audit (Schritt 4). So steht jedem Log-Eintrag von Anfang an eine konkrete Identität
-zur Verfügung.
+The order in the [Roadmap](../index.md) is deliberate: first the scaffolding and a
+read tool, then identity and permissions with Keycloak (step 3), and finally
+the audit (step 4). This way a concrete identity is available for every log entry
+from the start.
 
-## Wohin geloggt wird & Manipulationssicherheit
+## Where logging goes & tamper-resistance
 
-Zu unterscheiden sind zwei Dinge: die **Integrität beim Schreiben** (die geprüfte
-Identität stellt sicher, dass der geloggte Agent echt ist – das ist gegeben) und die
-**Manipulationssicherheit nach dem Schreiben** (kann ein Eintrag nachträglich geändert
-oder gelöscht werden?).
+Two things need to be distinguished: **integrity at write time** (the verified
+identity guarantees that the logged agent is genuine – this holds) and
+**tamper-resistance after writing** (can an entry be changed or deleted
+later?).
 
-- **POC**: einfaches Logging ins **Terminal (stdout)**. Bewusst minimal – keine
-  Persistenz, keine Härtung.
-- **AWS-Zielentwurf**: Der Audit-Trail wird in einen **separaten, abgeschotteten
-  (confidential) Account** geschrieben und dort **append-only** abgelegt. Die eigentliche
-  Stärke ist die Trennung der Zugriffsrechte – selbst ein kompromittierter Server-Account
-  (oder ein Insider mit Rechten auf die Nutzdaten) kann die Logs dann nicht nachträglich
-  verändern. Siehe [Infrastruktur & Betrieb](infrastructure-operations.md).
+- **PoC**: simple logging to the **terminal (stdout)**. Deliberately minimal – no
+  persistence, no hardening.
+- **AWS target design**: the audit trail is written to a **separate, isolated
+  (confidential) account** and stored there **append-only**. Its real
+  strength is the separation of access rights – even a compromised server account
+  (or an insider with access to the payload data) then cannot alter the logs
+  after the fact. See [Infrastructure & operations](infrastructure-operations.md).

@@ -4,97 +4,95 @@ hide:
   - toc
 ---
 
-# Coding Challenge - MCP-Server für KI-Agenten
+# MCP Server for AI Agents
 
-## Aufgabenstellung
+## The problem
 
-Es soll ein **MCP-Server** implementiert werden, der Daten aus einer **Datenbank** über
-standardisierte MCP-Tools für KI-Agenten bereitstellt. Verschiedene Agents nutzen den
-Server als Werkzeug, um diese Daten abzufragen.
+An **MCP server** that serves data from a **database** to AI agents through
+standardized MCP tools. Different agents use the server as a tool to query that
+data — but never touch the database directly.
 
-**Hinweis**: Testweise wird der bekannte **Titanic-Datensatz** verwendet, der als **SQLite**-Datenbank
-vorliegt. Für dieses Projekt gehe ich davon aus, dass dieser Datensatz stellvertretend für
-**sensible Daten** steht (z.B. Versichertendaten) – daraus ergibt sich der Bedarf an
-Authentifizierung, Zugriffskontrolle und Nachvollziehbarkeit.
+**Note:** The example uses the well-known **Titanic** dataset, available as a
+**SQLite** database. Throughout this project I treat that dataset as a stand-in
+for **sensitive data** (think insurance records) — which is what creates the need
+for authentication, access control, and auditability in the first place.
 
-## Erste Fragen
+## Guiding questions
 
-Beim Lesen der Aufgabenstellung kamen mir direkt diese Fragen in den Sinn:
+Reading the problem, these questions came to mind right away — and they structure
+the topics and the roadmap (see the navigation above):
 
-- Wie stelle ich sicher, dass Agents nur auf die Daten zugreifen können, für die sie
-  berechtigt sind?
-- Wie halte ich fest, welcher Agent wann welche Daten abgefragt hat?
-- Wie gestalte ich den Datenbankzugriff so, dass sich später andere Datenbanksysteme
-  (z.B. PostgreSQL, DynamoDB) anbinden lassen?
-- Wie stellen wir den Server produktiv auf AWS bereit, sodass er auch bei hoher
-  Last skalierbar und verfügbar bleibt?
-- Wie gestalte ich Onboarding und Offboarding von Agents – schneller Zugriff für neue,
-  zuverlässige Sperrung für abgekündigte?
+- How do I ensure agents can only access the data they are authorized for?
+- How do I keep a record of which agent queried what, and when?
+- How do I design database access so other database systems (e.g. PostgreSQL,
+  DynamoDB) can be plugged in later?
+- How do we deploy the server to AWS so it stays scalable and available under
+  load?
+- How do I handle onboarding and offboarding of agents — fast access for new
+  ones, reliable revocation for decommissioned ones?
 
-Diese Fragen strukturieren die Themenbereiche und die Roadmap (siehe Navigation oben).
+## Scope of this solution
 
-## Umfang dieser Lösung
+The focus is a **working local proof of concept** that demonstrates the central
+questions in practice.
 
-Aufgrund der begrenzten Bearbeitungszeit liegt der Fokus auf einem **lauffähigen lokalen
-Proof of Concept**, der die zentralen Fragen praktisch demonstriert.
+**Implemented in this PoC:**
 
-**Im Rahmen dieses POC soll umgesetzt werden:**
+- MCP server with a first read-only tool
+- swappable database access behind a repository interface
+- authentication and access control at the tool level (scopes)
+- auditing of every tool call
 
-- MCP-Server mit einem ersten lesenden Tool
-- austauschbarer Datenbankzugriff über ein Repository-Interface
-- Authentifizierung und Zugriffskontrolle auf Tool-Ebene (Scopes)
-- Auditing sämtlicher Tool-Aufrufe
+**Deliberately conceptual only** (see Topics):
 
-**Bewusst nur konzeptionell** (siehe Themen):
+- production deployment on AWS ([Infrastructure & operations](topics/infrastructure-operations.md))
+- agent lifecycle management ([Agent lifecycle](topics/agent-lifecycle.md))
 
-- produktive Bereitstellung auf AWS ([Infrastruktur & Betrieb](topics/infrastructure-operations.md))
-- Agent-Lifecycle-Management ([Agent-Lifecycle](topics/agent-lifecycle.md))
-
-## Architektur & Stack
+## Architecture & stack
 
 ```mermaid
 flowchart LR
-    Agent["KI-Agent (Client)"]
+    Agent["AI agent (client)"]
     KC["Keycloak<br/>(Identity Provider)"]
 
-    subgraph Server["MCP-Server (FastMCP)"]
-        Auth["Token-Validierung<br/>+ Scope-Prüfung"]
-        Tool["MCP-Tool"]
-        Audit["Audit-Middleware"]
-        Repo["Repository-Interface"]
+    subgraph Server["MCP Server (FastMCP)"]
+        Auth["Token validation<br/>+ scope check"]
+        Tool["MCP tool"]
+        Audit["Audit middleware"]
+        Repo["Repository interface"]
     end
 
     DB[("SQLite<br/>Titanic")]
-    Log["Audit-Log (stdout)"]
+    Log["Audit log (stdout)"]
 
-    Agent -- "1 . Token (client credentials)" --> KC
-    Agent -- "2 . Aufruf + Bearer-Token" --> Auth
-    Auth --> Tool
+    Agent -- "1. Token (client credentials)" --> KC
+    Agent -- "2. Call + bearer token" --> Auth
+    Auth --> Audit
+    Audit --> Tool
     Tool --> Repo
     Repo --> DB
-    Tool -.-> Audit
     Audit -.-> Log
 ```
 
-Der Agent holt zunächst ein Token bei Keycloak und ruft das Tool dann mit diesem Token auf.
-Der Server validiert das Token selbst, prüft die Scopes, führt das Tool über das
-Repository gegen die Datenbank aus und protokolliert den Aufruf.
+The agent first fetches a token from Keycloak, then calls the tool with it. The
+server validates the token itself, checks the scopes, runs the tool against the
+database through the repository, and logs the call.
 
-Die eingesetzten Technologien hinter diesen Bausteinen:
+The technologies behind these building blocks:
 
-- **Sprache**: Python
-- **MCP-Framework**: FastMCP (offizielles Python-MCP-SDK)
-- **DB-Abstraktion**: Repository Pattern, darunter SQLAlchemy (SQLite → PostgreSQL)
-- **AuthN/AuthZ**: Keycloak (OAuth2/OIDC), Scopes zunächst auf Tool-Ebene
+- **Language**: Python
+- **MCP framework**: FastMCP (official Python MCP SDK)
+- **DB abstraction**: repository pattern over SQLAlchemy (SQLite → PostgreSQL)
+- **AuthN/AuthZ**: Keycloak (OAuth2/OIDC), scopes at the tool level first
 
-## Roadmap (4 Schritte)
+## Roadmap (4 steps)
 
-Die Reihenfolge ist bewusst gewählt: Jeder Schritt liefert für sich Mehrwert und legt
-die Grundlage für den nächsten.
+The order is deliberate: each step delivers value on its own and lays the
+groundwork for the next.
 
-| Schritt | Thema | Ergebnis |
-|--------|-------|----------|
-| 1 | [Client + Server über HTTP](roadmap/01-fastmcp.md) | Lauffähige Grundstruktur: MCP-Client und -Server über HTTP |
-| 2 | [Repository Pattern](roadmap/02-repository-pattern.md) | Datenbankzugriff hinter fachlichem Interface, DB austauschbar, erstes lesendes Tool |
-| 3 | [Keycloak & Scopes](roadmap/03-keycloak-scopes.md) | OAuth2/OIDC-Zugriffskontrolle, Scopes zunächst auf Tool-Ebene, führt die Agent-Identität ein |
-| 4 | [Auditing Layer](roadmap/04-auditing.md) | Protokollierung aller Anfragen pro Agent (nutzt die Keycloak-Identität) |
+| Step | Topic | Result |
+|------|-------|--------|
+| 1 | [Client + server over HTTP](roadmap/01-fastmcp.md) | Working skeleton: MCP client and server over HTTP |
+| 2 | [Repository pattern](roadmap/02-repository-pattern.md) | Database access behind a domain-level interface, swappable DB, first read-only tool |
+| 3 | [Keycloak & scopes](roadmap/03-keycloak-scopes.md) | OAuth2/OIDC access control, scopes at the tool level first, introduces agent identity |
+| 4 | [Auditing layer](roadmap/04-auditing.md) | Logging of every request per agent (uses the Keycloak identity) |

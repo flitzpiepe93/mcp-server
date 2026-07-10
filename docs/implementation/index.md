@@ -1,43 +1,43 @@
-# Umsetzung im Überblick
+# Implementation Overview
 
-So sieht der real umgesetzte Stand aus: ein lokaler Stack aus drei Containern, über
-`docker-compose` orchestriert und per **Docker-Servicenamen** vernetzt.
+Here is the implemented state: a local stack of three containers, orchestrated
+with `docker-compose` and networked through **Docker service names**.
 
 ```mermaid
 flowchart TB
     subgraph compose["docker-compose"]
-        KC["keycloak<br/>:8080 · Realm-Import"]
+        KC["keycloak<br/>:8080 · Realm import"]
         Server["mcp-server<br/>:8000"]
         Client["client<br/>(on-demand)"]
     end
 
-    DB[("SQLite · Titanic<br/>/data (Volume)")]
+    DB[("SQLite · Titanic<br/>/data (volume)")]
 
-    Client -- "Token holen" --> KC
-    Client -- "Aufruf + Bearer" --> Server
-    Server -- "JWKS / Token-Validierung" --> KC
+    Client -- "Fetch token" --> KC
+    Client -- "Call + bearer" --> Server
+    Server -- "JWKS / token validation" --> KC
     Server --> DB
 ```
 
-| Komponente | Funktion |
+| Component | Function |
 |------------|----------|
-| **keycloak** | Identity Provider; importiert beim Start den versionierten Realm. |
-| **mcp-server** | Validiert Tokens, setzt Scopes durch, auditiert und greift über das Repository auf die Datenbank zu. |
-| **client** | Beispiel-Agent, läuft auf Abruf (`docker compose run --rm client`). |
-| **SQLite** | Beispieldatenbank, als read-only Volume in den Server gemountet. |
+| **keycloak** | Identity provider; imports the versioned realm at startup. |
+| **mcp-server** | Validates tokens, enforces scopes, audits, and accesses the database through the repository. |
+| **client** | Example agent, runs on demand (`docker compose run --rm client`). |
+| **SQLite** | Example database, mounted into the server as a read-only volume. |
 
-## Ablauf einer Anfrage
+## Request flow
 
-1. Der Client holt bei Keycloak ein Token (**Client-Credentials-Flow**, Service-Account).
-2. Er ruft das MCP-Tool mit diesem Token als **Bearer** auf.
-3. Der Server **validiert das Token selbst** (Signatur via JWKS, Issuer, Audience) und
-   prüft die geforderten **Scopes**.
-4. Bei Erfolg führt das Tool die Abfrage über das **Repository** gegen die Datenbank aus.
-5. Die **Audit-Middleware** protokolliert den Aufruf (Agent, Tool, Parameter, Dauer) –
-   ohne den Ergebnis-Inhalt.
+1. The client fetches a token from Keycloak (**client credentials flow**, service account).
+2. It calls the MCP tool with this token as a **bearer**.
+3. The server **validates the token itself** (signature via JWKS, issuer, audience) and
+   checks the required **scopes**.
+4. On success, the tool runs the query against the database through the **repository**.
+5. The **audit middleware** logs the call (agent, tool, parameters, duration) —
+   but not the result content.
 
-## Bausteine im Detail
+## Building blocks in detail
 
-- [Repository & erstes Tool](repository.md) – fachliches Interface, SQLAlchemy, Tool.
-- [Keycloak & Scopes](keycloak.md) – Authentifizierung, Audience, Scope-Durchsetzung.
-- [Auditing](auditing.md) – Middleware, die jeden Tool-Aufruf protokolliert.
+- [Repository & first tool](repository.md) — domain-level interface, SQLAlchemy, tool.
+- [Keycloak & scopes](keycloak.md) — authentication, audience, scope enforcement.
+- [Auditing](auditing.md) — middleware that logs every tool call.

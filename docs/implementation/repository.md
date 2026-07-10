@@ -1,54 +1,67 @@
-# Umsetzung: Repository & erstes Tool
+# Implementation: Repository & first tool
 
-Konkretisiert [Schritt 2 – Repository Pattern](../roadmap/02-repository-pattern.md).
+Concretizes [Step 2 – Repository Pattern](../roadmap/02-repository-pattern.md).
 
-## Interface und Schema
+## Interface and schema
 
-- **`TitanicRepository`** (`Protocol`): das fachliche Interface über das Titanic-Dataset.
-  Der Server hängt nur an diesem Protocol, nie an einer konkreten Datenbank.
-- **`SurvivalRate`** (Pydantic-Model): das Ergebnis einer Abfrage – pro Gruppe die
-  Felder `passenger_class`/`sex` (nur das gruppierte Feld ist gesetzt), `count` und
+- **`TitanicRepository`** (`Protocol`): the domain-level interface over the Titanic dataset.
+  The server depends only on this protocol, never on a concrete database.
+- **`SurvivalRate`** (Pydantic model): the result of a query. Per group it holds
+  the fields `passenger_class`/`sex` (only the grouped field is set), `count` and
   `survival_rate` (0.0–1.0).
-- **`dispose()`** ist Teil des Interface, damit der Server jede Implementierung
-  einheitlich abbauen kann (Implementierungen ohne Ressourcen sind ein No-op).
+- **`dispose()`** is part of the interface so the server can tear down every
+  implementation the same way (implementations without resources are a no-op).
 
-## Erstes lesendes Tool
+## First read-only tool
 
-`get_survival_rate(group_by)` gibt die Überlebensrate je Gruppe zurück. `group_by` ist
-ein `StrEnum` (`SurvivalGroupBy`) mit den erlaubten Werten `passenger_class` und `sex`.
-Der Enum-Typ sorgt zugleich für die Whitelist (kein durchgereichtes SQL) und dafür, dass
-FastMCP dem Agenten die erlaubten Werte im Tool-Schema anzeigt.
+`get_survival_rate(group_by)` returns the survival rate per group. `group_by` is
+a `StrEnum` (`SurvivalGroupBy`) with the allowed values `passenger_class` and `sex`.
+The enum type acts as the whitelist (no pass-through SQL) and lets FastMCP show the
+agent the allowed values in the tool schema.
 
-## Repository-Injektion über den Lifespan
+## Repository injection via the lifespan
 
-Der Server wird über eine Factory `build_server(build_repository)` gebaut. Übergeben wird
-eine **Factory** (kein fertiges Repository), damit das Repository – und sein
-Connection-Pool – **im Lifespan** bei Server-Start erzeugt und beim Shutdown
-(`dispose()`) wieder abgebaut wird. So sind Auf- und Abbau symmetrisch an den
-Server-Lebenszyklus gebunden; zugleich kann ein Test eine andere Implementierung
-injizieren.
+The server is built through a factory, `build_server(build_repository)`. It takes
+a **factory** rather than a ready-made repository, so the repository — and its
+connection pool — are created **in the lifespan** at server startup and torn down
+at shutdown (`dispose()`). Setup and teardown are therefore bound symmetrically to
+the server lifecycle, and a test can inject a different implementation.
 
-## Konfiguration
+## Configuration
 
-Die Datenbank-URL ist **verpflichtend** über die Umgebungsvariable
-`TITANIC_DATABASE_URL` zu setzen (kein stiller Default); fehlt sie, bricht der Start mit
-einem Fehler ab. Lokaler Start gegen die Beispiel-SQLite-DB z.B.:
+The database URL **must** be set via the environment variable
+`TITANIC_DATABASE_URL` (no silent default); if it is missing, startup aborts with
+an error. For example, to start locally against the example SQLite DB:
 
 ```bash
 TITANIC_DATABASE_URL="sqlite:///$(pwd)/data/titanic.db" uv run server
 ```
 
-## Testbarkeit
+## Testability
 
-Weil der Server nur gegen das `TitanicRepository`-Interface programmiert, lässt sich für
-Tests ein **`MemoryTitanicRepository`** injizieren – ein schlankes Test-Double, das
-vorgegebene Ergebnisse liefert, statt eine echte Datenbank zu nutzen. Über
-`build_server(...)` wird es anstelle der SQL-Implementierung in den Server gegeben, sodass
-der Tool-Pfad mit dem In-Memory-Client deterministisch und ohne Infrastruktur getestet
-werden kann.
+Because the server programs only against the `TitanicRepository` interface, tests
+can inject a **`MemoryTitanicRepository`** — a lean test double that returns
+predefined results instead of hitting a real database. `build_server(...)` passes
+it into the server in place of the SQL implementation, so the tool path can be
+tested deterministically and without infrastructure using the in-memory client.
 
-## Bewusst (noch) nicht umgesetzt
+## Why no separate domain layer
 
-- **Connection-Pool-Tuning**: es läuft der SQLAlchemy-Default-Pool; explizite Parameter
-  (`pool_size` etc.) kommen erst mit der PostgreSQL-Umstellung, wenn sie real gebraucht
-  werden.
+A common next instinct is to add a domain layer on top of the repository: have the
+repository return raw observations and let Python compute the survival rate. I
+chose not to. The only business logic here is a single aggregation
+(`GROUP BY ... avg(survived)`), and that is exactly what a database does best —
+pushing it into Python would throw away the database's strength and add a layer
+with nothing genuinely DB-independent to test. `MemoryTitanicRepository` is
+deliberately just a test double, not a second aggregation engine.
+
+The point at which a domain layer *would* earn its place is when real
+DB-independent logic appears — multi-step calculations, rules spanning several
+entities, normalization. Building it before then would be speculative structure,
+so it waits for that trigger.
+
+## Deliberately not (yet) implemented
+
+- **Connection pool tuning**: the SQLAlchemy default pool is in use; explicit parameters
+  (`pool_size` etc.) will come with the PostgreSQL migration, once they are actually
+  needed.

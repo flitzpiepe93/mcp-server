@@ -1,53 +1,68 @@
-# Datenbankarchitektur
+# Database architecture
 
-> **Frage:** Wie gestalten wir den Datenbankzugriff so, dass wir später unterschiedliche
-> Datenbanksysteme (z.B. PostgreSQL, DynamoDB) unterstützen können?
+> **Question:** How do we design database access so that we can later support different
+> database systems (e.g. PostgreSQL, DynamoDB)?
 
-## Ansatz: Repository Pattern
+## Approach: Repository Pattern
 
-Der Datenbankzugriff liegt hinter einem **fachlichen Repository-Interface**
-([Schritt 2](../roadmap/02-repository-pattern.md)). Der MCP-Server kennt nur das
-Interface, nicht die konkrete Datenbank.
+Database access sits behind a **domain-oriented repository interface**
+([step 2](../roadmap/02-repository-pattern.md)). The MCP server knows only the
+interface, not the concrete database.
 
-## Eigenschaften
+## Properties
 
-- **Fachliches Interface statt SQL**: Methoden wie `get_customer_by_id`, kein
-  durchgereichtes SQL. Verhindert, dass DB-Details in den Server leaken.
-- **Interface als `Protocol`/ABC**: Konkrete Implementierungen werden injiziert.
-- **Austausch über Implementierungen**:
-  - **SQLite** (POC) und **PostgreSQL** (später): eine gemeinsame
-    SQLAlchemy-Implementierung, Wechsel im Wesentlichen über die Connection-URL.
-  - **DynamoDB**: eine *eigene* Repository-Implementierung gegen dasselbe Interface –
-    nicht über SQLAlchemy abbildbar, aber vom Pattern getragen.
-  - **MemoryRepository** (Tests): eine schlanke In-Memory-Implementierung des Interfaces.
-    Erlaubt schnelle, deterministische Tests ohne echte Datenbank oder externe
-    Infrastruktur.
+- **Domain-oriented interface instead of SQL**: methods like `get_customer_by_id`, with no
+  SQL passed through. This keeps DB details from leaking into the server.
+- **Interface as `Protocol`/ABC**: concrete implementations are injected.
+- **Swapping via implementations**:
+  - **SQLite** (PoC) and **PostgreSQL** (later): a shared
+    SQLAlchemy implementation, switched essentially via the connection URL.
+  - **DynamoDB**: a *dedicated* repository implementation against the same interface –
+    not mappable via SQLAlchemy, but supported by the pattern.
+  - **MemoryRepository** (tests): a lean in-memory implementation of the interface.
+    It enables fast, deterministic tests without a real database or external
+    infrastructure.
 
-## Connection-Pool & Lifespan
+## Connection pool & lifespan
 
-Unter Last ist das Öffnen/Schließen einer DB-Verbindung pro Anfrage teuer. Ein
-**Connection-Pool** hält Verbindungen offen und verteilt sie wieder. Das ist ein
-Implementierungsdetail der SQLAlchemy-Variante (für PostgreSQL relevant, bei SQLite als
-lokaler Datei praktisch kein Thema) und lebt komplett hinter dem Repository-Interface –
-der MCP-Server merkt nichts davon.
+Under load, opening and closing a DB connection per request is expensive. A
+**connection pool** keeps connections open and hands them out again. This is an
+implementation detail of the SQLAlchemy variant (relevant for PostgreSQL, practically
+a non-issue with SQLite as a local file) and lives entirely behind the repository interface –
+the MCP server never sees it.
 
-Aktuell läuft bewusst der **SQLAlchemy-Default-Pool** ohne explizite Konfiguration. Pool
-existiert also bereits, aber Tuning-Parameter (`pool_size`, `max_overflow`, …) werden
-erst mit der PostgreSQL-Umstellung eingeführt, wenn sie real gebraucht werden – bei
-SQLite haben sie keinen Nutzen und würden den lokalen Pool sogar stören.
+For now the **SQLAlchemy default pool** deliberately runs without explicit configuration. A pool
+already exists, but tuning parameters (`pool_size`, `max_overflow`, …) come only
+with the PostgreSQL switch, when they are actually needed – with
+SQLite they serve no purpose and would even disrupt the local pool.
 
-Erzeugt und freigegeben wird der Pool im **Lifespan des MCP-Servers**: FastMCP bietet
-einen Lifespan-Hook, der beim Start einmalig läuft und beim Shutdown aufräumt. Dort wird
-die Engine/der Pool **einmal** aufgesetzt, über die gesamte Server-Laufzeit gehalten und
-beim Shutdown sauber disposed (`engine.dispose()`). Der Lifespan instanziiert das
-Repository mit diesem Pool und injiziert es in den Server.
+The pool is created and released in the **lifespan of the MCP server**: FastMCP provides
+a lifespan hook that runs once at startup and cleans up at shutdown. There the
+engine and pool are set up **once**, held for the entire server runtime, and
+disposed cleanly at shutdown (`engine.dispose()`). The lifespan instantiates the
+repository with this pool and injects it into the server.
 
-Das fügt sich mit dem zustandslosen Server aus
-[Infrastruktur & Betrieb](infrastructure-operations.md) zusammen: "zustandslos" meint
-keinen Zustand *pro Anfrage* – eine über den Lifespan gehaltene Ressource wie der Pool
-ist davon unberührt und sogar erwünscht.
+This fits the stateless server described in
+[Infrastructure & operations](infrastructure-operations.md): "stateless" means
+no state *per request* – a resource held for the lifespan, like the pool,
+is unaffected and even desirable.
 
-## Konsequenz
+## Where the pattern's limit shows
 
-Ein Datenbankwechsel berührt nur die jeweilige Repository-Implementierung, nie den
-MCP-Server- oder Tool-Code.
+The repository interface is honest about swapping *implementations*, but it does
+not pretend that every database is equally suited to every query. The current
+tool is an aggregation (`GROUP BY ... avg(survived)`) — a natural fit for SQL. A
+key-value store like DynamoDB has no `GROUP BY`, so the same tool would mean
+either pre-aggregating the figures on write, maintaining a secondary structure,
+or scanning and aggregating in the implementation. That is a data-modeling
+decision, not a code-porting one.
+
+So the pattern keeps the *server* independent of the database, but choosing a
+fundamentally different store still requires rethinking how the data is shaped —
+the interface contains that decision to one implementation rather than removing
+it.
+
+## Consequence
+
+A database switch touches only the relevant repository implementation, never the
+MCP server or tool code.
