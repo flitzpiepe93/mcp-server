@@ -50,6 +50,11 @@ class SqlTitanicRepository:
         self._engine.dispose()
 
     def get_survival_rate(self, group_by: SurvivalGroupBy) -> list[SurvivalRate]:
+        # The two branches are kept explicit on purpose. A table-driven mapping
+        # (dimension -> table/column) would deduplicate them but build SQL from
+        # dynamic identifiers; with only two dimensions the plain, literal
+        # queries are safer and clearer. A whitelist-based mapping earns its
+        # place once a third dimension appears.
         if group_by is SurvivalGroupBy.PASSENGER_CLASS:
             query = """
                 SELECT c.class AS label, count(*) AS n, avg(o.survived) AS rate
