@@ -159,8 +159,10 @@ same port as the MCP server, so serving the docs on 8001 lets both run at once.
 
 ## Dataset
 
-The Titanic dataset is a well-known public dataset, checked in as a small SQLite
-file (`data/titanic.db`) so the demo runs with zero setup.
+The Titanic dataset (891 passengers) comes from seaborn's built-in `titanic`
+dataset (BSD-licensed), which derives from the public Kaggle/OpenML Titanic data.
+It is checked in as a small SQLite file (`data/titanic.db`) so the demo runs with
+zero setup.
 
 ---
 
