@@ -16,5 +16,5 @@ down:  ## Stop containers and remove volumes (Keycloak realm state is discarded)
 run-client:  ## Run the example agent client once against the server
 	docker compose run --rm client
 
-docs-serve:  ## Serve the documentation locally with live reload
-	uv run --group docs mkdocs serve
+docs-serve:  ## Serve the documentation locally with live reload (port 8001, avoids the server's 8000)
+	uv run --group docs mkdocs serve -a 127.0.0.1:8001
