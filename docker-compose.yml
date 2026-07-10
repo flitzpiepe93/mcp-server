@@ -40,4 +40,5 @@ services:
       KEYCLOAK_TOKEN_URL: "http://keycloak:8080/realms/mcp/protocol/openid-connect/token"
       MCP_URL: "http://mcp-server:8000/mcp/"
     depends_on:
-      - mcp-server
+      mcp-server:
+        condition: service_healthy

@@ -31,4 +31,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 USER app
 EXPOSE 8000
 
+HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=10s \
+    CMD ["python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
+
 CMD ["server"]
