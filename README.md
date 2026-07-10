@@ -1,64 +1,114 @@
-# MCP-Datenbankserver für KI-Agenten
+# MCP Database Server for AI Agents
 
-Dieses Repository stellt einen MCP-Server bereit, der kontrollierten Datenbankzugriff für
-KI-Agenten über standardisierte **MCP-Tools** ermöglicht. Agenten rufen fachliche Werkzeuge
-auf, statt direkten Datenbankzugriff zu erhalten – jeder Zugriff ist authentifiziert,
-autorisiert und protokolliert.
+An MCP server that gives AI agents **controlled, audited access** to a database
+through business-level tools instead of raw SQL. Every call is authenticated,
+authorized against tool-level scopes, and logged — so you always know which
+agent read what, and when.
 
-Das Repository ist im Rahmen einer **Coding Challenge** entstanden und ist ein lokaler
-**Proof-of-Concept**: Es zeigt das Zusammenspiel der Bausteine (Docker, Keycloak, SQLite),
-ist aber nicht für den Produktiveinsatz gehärtet. Produktive Bereitstellung auf AWS und
-Agent-Lifecycle sind bewusst nur konzeptionell ausgearbeitet (siehe [`docs/`](docs/index.md)).
+The dataset here is the public **Titanic** dataset (SQLite), standing in for
+*sensitive data* (think insurance records): that sensitivity is what motivates
+the authentication, access control, and auditability in the first place. The
+one implemented tool, `get_survival_rate`, returns survival figures grouped by
+passenger class or sex.
 
-Als Beispiel dient der **Titanic-Datensatz** (als SQLite-Datenbank). Er steht hier
-stellvertretend für **sensible Daten** (z.B. Versichertendaten) – daraus ergibt sich
-überhaupt erst der Bedarf an Authentifizierung, Zugriffskontrolle und Nachvollziehbarkeit.
-Das erste Tool (`get_survival_rate`) liefert Überlebensraten gruppiert nach Klasse oder
-Geschlecht.
+## Key engineering decisions
 
-- **Authentifizierung** über Keycloak (OAuth2/OIDC); der Server validiert jedes Token.
-- **Autorisierung** über Scopes auf Tool-Ebene – ein Agent ruft nur die Tools auf, für die
-  er berechtigt ist.
-- **Auditing** jedes Aufrufs: welcher Agent wann welches Tool mit welchen Parametern nutzt.
-- **Klare Trennung von Logik und Datenbankzugriff** durch ein Repository-Interface – das
-  Backend ist austauschbar (SQLite, PostgreSQL, sogar DynamoDB), ohne die Server-Logik zu ändern.
+The interesting part of this project is not the tool — it's the boundaries
+around it. I designed each decision below to keep the local proof-of-concept and
+a future production deployment on the *same* architecture, so moving to the cloud
+is a swap of implementations, not a rewrite.
 
-## Aufbau
+### 1. A repository interface, not raw SQL
 
-Über `docker-compose` orchestriert – zwei dauerhafte Dienste (Server, Keycloak) plus den
-einmalig laufenden Beispiel-Client:
+I made the server depend on a `TitanicRepository` **protocol** that exposes
+domain-level operations (`get_survival_rate`), never a SQL string. The concrete
+SQL backend, the in-memory test double, or a future DynamoDB implementation all
+satisfy the same interface — so the storage engine is swappable without touching
+server code. I kept the single piece of aggregation logic
+(`GROUP BY ... avg(survived)`) *in the database*, where it belongs, rather than
+pulling it into Python.
 
+### 2. Authenticate at the edge, authorize in the server
+
+Token **validation** can happen at the edge (in the PoC the server validates the
+Keycloak token itself; in the cloud target an API gateway would). But I keep
+**authorization** in the server, because only the server knows which tools and
+data exist. It reads the agent's identity from the verified claims regardless of
+who validated the token — so the authorization model stays stable from PoC to
+production. Scopes are enforced at tool level: a base scope
+every agent must carry (`titanic:access`) plus a per-tool scope
+(`titanic:survival:read`), and the token's `audience` ties it to this specific
+server so a token minted for another service in the same realm is rejected.
+
+### 3. Auditing as a middleware layer
+
+I made auditing a cross-cutting `AuditMiddleware`, not something each tool
+remembers to call. It records *who* (the authenticated agent), *what* (tool +
+query parameters), and *how long* — but never the result content or size, so the
+audit trail never leaks the data it is meant to protect.
+
+The server also exposes an unauthenticated `/health` endpoint for container
+health checks and load-balancer probes — the container image uses it to report
+readiness, and the example client waits on that before it calls the server.
+
+### 4. What I deliberately left out (YAGNI)
+
+- **No separate domain layer.** The only business logic is one SQL aggregation;
+  a Python-side aggregation layer would throw away the database's strength and
+  add nothing testable. It gets built when real DB-independent logic appears.
+- **AWS deployment and agent lifecycle are conceptual only.** They are designed
+  in [`docs/`](docs/index.md) but not implemented — the PoC's job is to prove
+  the boundaries work end to end, locally.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Agent["AI Agent (Client)"]
+    KC["Keycloak<br/>(Identity Provider)"]
+
+    subgraph Server["MCP Server (FastMCP)"]
+        Auth["Token validation<br/>+ scope check"]
+        Audit["Audit middleware"]
+        Tool["MCP tool"]
+        Repo["Repository interface"]
+    end
+
+    DB[("SQLite<br/>Titanic")]
+    Log["Audit log (stdout)"]
+
+    Agent -- "1. Token (client credentials)" --> KC
+    Agent -- "2. Call + bearer token" --> Auth
+    Auth --> Audit
+    Audit --> Tool
+    Tool --> Repo
+    Repo --> DB
+    Audit -.-> Log
 ```
-.
-├── server/              # MCP-Server: validiert Tokens, setzt Scopes durch, auditiert
-│   └── src/server/      # app.py, repository/, auth.py, audit.py
-├── client/              # Beispiel-Agent: holt ein Token (Client-Credentials) und ruft das Tool
-├── keycloak/            # Identity Provider; Realm-Import (Realm, Client, Scopes)
-├── data/                # Beispiel-Datenbank (Titanic, SQLite)
-├── docs/                # Architektur & Roadmap (mkdocs-tauglich)
-├── docker-compose.yml   # Orchestrierung aller Dienste
-├── Makefile             # Entwickler-Kommandos (make help)
-└── .env.example         # Vorlage für die lokale Konfiguration
-```
 
-## Setup
+**Stack:** Python · FastMCP (official Python MCP SDK) · SQLAlchemy behind the
+repository interface (SQLite → PostgreSQL) · Keycloak (OAuth2/OIDC) · Docker
+Compose · mkdocs-material for the docs.
 
-**Voraussetzungen:** Docker (inkl. Compose v2) und `make`. Für das Generieren der
-[Dokumentation](#dokumentation) sowie für Code-Entwicklung außerhalb der Container
-zusätzlich [uv](https://docs.astral.sh/uv/) und [pre-commit](https://pre-commit.com/)
-(Hooks einmalig per `pre-commit install` aktivieren).
+## Run it locally
+
+**Requirements:** Docker (incl. Compose v2) and `make`. For building the
+[docs](#documentation) or developing outside the containers you also need
+[uv](https://docs.astral.sh/uv/) and [pre-commit](https://pre-commit.com/)
+(enable the hooks once with `pre-commit install`).
 
 ```bash
-cp .env.example .env   # lokale Konfiguration (Dev-Defaults, keine echten Secrets)
-make up                # Keycloak + MCP-Server starten (mit Build); Logs laufen in der Konsole
-make run-client        # Beispiel-Agent einmal gegen den Server laufen lassen
+cp .env.example .env   # local config (dev defaults, no real secrets)
+make up                # start Keycloak + MCP server (with build); logs stream to the console
+make run-client        # run the example agent once against the server
 ```
 
-`make` (ohne Argument) listet alle Kommandos (u.a. `refresh` für einen kompletten
-Neustart, `down` zum Stoppen). Die echte `.env` ist git-ignoriert; fehlt eine benötigte
-Variable, bricht der Start mit einem klaren Fehler ab.
+`make` with no argument lists every command. `refresh` does a full restart from
+scratch; `down` stops the containers and removes their volumes, so Keycloak's
+realm state is discarded (a fresh `make up` re-imports it). The real `.env` is
+git-ignored; if a required variable is missing, startup fails with a clear error.
 
-Der Client holt ein Token bei Keycloak, ruft das Tool auf und gibt das Ergebnis aus:
+The client fetches a token from Keycloak, calls the tool, and prints the result:
 
 ```text
 Token received (scope='titanic:survival:read titanic:access')
@@ -67,43 +117,53 @@ Calling get_survival_rate(group_by='sex')
   sex='male'   count=577 survival_rate=0.189
 ```
 
-Parallel protokolliert die Audit-Middleware des Servers jeden Aufruf – mit Agent, Tool
-und Parametern:
+In parallel, the server's audit middleware logs every call — with agent, tool,
+and parameters:
 
 ```text
 INFO  tool_call agent=example-agent tool=get_survival_rate args={'group_by': 'sex'} duration_ms=8.7
 ```
 
+## Services & ports
+
+`make up` starts two services, each bound to `127.0.0.1` only (not exposed
+externally):
+
+| Service        | Address                 | Purpose                                     |
+| -------------- | ----------------------- | ------------------------------------------- |
+| **MCP server** | `http://127.0.0.1:8000` | MCP endpoint (`/mcp/`), health (`/health`)  |
+| **Keycloak**   | `http://127.0.0.1:8080` | Identity provider (token issuance, realm)   |
+
+The example client is not long-running — it runs once via `make run-client`.
+
 ## Tests
 
-Die Tests des Servers laufen über das `server/`-Paket – sie nutzen ein In-Memory-Repository
-und brauchen weder Docker noch Keycloak:
+The server tests run from the `server/` package against an in-memory
+repository — no Docker or Keycloak required:
 
 ```bash
 cd server && uv run pytest
 ```
 
-## Dienste & Ports
+## Documentation
 
-`make up` startet zwei Dienste, jeweils nur an `127.0.0.1` gebunden (nicht nach außen
-exponiert):
-
-| Dienst         | Adresse                 | Zweck                                      |
-| -------------- | ----------------------- | ------------------------------------------ |
-| **MCP-Server** | `http://127.0.0.1:8000` | MCP-Endpunkt (`/mcp/`), Health (`/health`) |
-| **Keycloak**   | `http://127.0.0.1:8080` | Identity Provider (Token-Ausgabe, Realm)   |
-
-Der Beispiel-Client läuft nicht dauerhaft, sondern nur einmalig über `make run-client`.
-
-## Dokumentation
-
-Die Architektur- und Roadmap-Doku unter [`docs/`](docs/index.md) wird mit
-[mkdocs-material](https://squidfunk.github.io/mkdocs-material/) als Website generiert:
+The architecture and roadmap docs under [`docs/`](docs/index.md) are published as
+a website with [mkdocs-material](https://squidfunk.github.io/mkdocs-material/):
 
 ```bash
-make docs-serve        # Doku lokal mit Live-Reload servieren
+make docs-serve        # serve the docs locally with live reload (on 127.0.0.1:8001)
 ```
 
-> **Achtung – Port-Konflikt:** mkdocs serviert standardmäßig ebenfalls auf Port **8000** –
-> demselben Port wie der MCP-Server. Beide also **nicht gleichzeitig** starten, oder die Doku
-> auf einem anderen Port servieren: `uv run --group docs mkdocs serve -a 127.0.0.1:8001`.
+`docs-serve` binds to port **8001** on purpose: mkdocs defaults to 8000, the
+same port as the MCP server, so serving the docs on 8001 lets both run at once.
+
+## Dataset
+
+The Titanic dataset is a well-known public dataset, checked in as a small SQLite
+file (`data/titanic.db`) so the demo runs with zero setup.
+
+---
+
+*Originally built as a time-boxed coding challenge, then reworked into this
+portfolio piece. The [docs](docs/index.md) walk through the design as a
+four-step roadmap.*
