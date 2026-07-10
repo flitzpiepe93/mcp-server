@@ -1,5 +1,11 @@
 # MCP Database Server for AI Agents
 
+> **Proof of concept.** A time-boxed exploration of secure agent–data
+> boundaries — designed to run locally, not a production service. Cloud
+> deployment and agent lifecycle are designed in the
+> [docs](https://flitzpiepe93.github.io/mcp-server/) but intentionally left
+> unimplemented; the PoC's job is to prove the boundaries work end to end.
+
 An MCP server that gives AI agents **controlled, audited access** to a database
 through business-level tools instead of raw SQL. Every call is authenticated,
 authorized against tool-level scopes, and logged — so you always know which
